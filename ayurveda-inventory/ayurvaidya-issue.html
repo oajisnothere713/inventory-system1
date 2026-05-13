@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AyurVaidya — Stock Issue</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f1f4f1;--surface:#fff;--surface-2:#f8faf8;
+  --border:#dce8dc;--border-2:#c8d8c8;
+  --green:#1A6B3C;--green-mid:#2D7A52;--green-light:#eaf3ee;--green-xl:#3aa864;
+  --blue:#185FA5;--blue-light:#e8f1fb;
+  --red:#B91C1C;--red-light:#fef2f2;
+  --amber:#92400E;--amber-light:#fffbeb;
+  --slate:#3d5a6c;--slate-light:#eef4f8;
+  --text:#0d1f12;--text-mid:#3d6148;--text-dim:#7a9982;--text-mute:#a8bfac;
+  --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;--serif:'Playfair Display',serif;
+  --r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
+
+/* ── Sidebar ─────────────────────────────────────────── */
+.sb{width:204px;min-width:204px;background:var(--green);display:flex;flex-direction:column;height:100vh;position:relative;overflow:hidden}
+.sb::after{content:'';position:absolute;bottom:-80px;right:-80px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,0.03);pointer-events:none}
+.logo-area{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.logo-name{font-family:var(--serif);font-size:22px;color:#fff;letter-spacing:-0.3px;line-height:1.05;margin-bottom:4px}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.42);line-height:1.55;font-weight:300}
+.logo-pill{display:inline-block;margin-top:8px;padding:2px 8px;border:1px solid rgba(255,255,255,0.18);border-radius:20px;font-family:var(--mono);font-size:9px;color:rgba(255,255,255,0.45);letter-spacing:0.4px}
+.nav-s{padding:12px 0 4px}
+.nav-lbl{font-size:9px;font-weight:600;color:rgba(255,255,255,0.28);letter-spacing:1.2px;text-transform:uppercase;padding:0 16px 6px}
+.nav-i{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:12.5px;color:rgba(255,255,255,0.58);cursor:pointer;border-left:2px solid transparent;transition:background 0.12s,color 0.12s}
+.nav-i:hover{background:rgba(255,255,255,0.06);color:#fff}
+.nav-i.active{background:rgba(255,255,255,0.12);color:#fff;border-left-color:rgba(255,255,255,0.65);font-weight:500}
+.nav-icon{width:26px;height:26px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:12px;background:rgba(255,255,255,0.07);flex-shrink:0}
+.nav-i.active .nav-icon{background:rgba(255,255,255,0.14)}
+.nav-chip{margin-left:auto;font-family:var(--mono);font-size:9.5px;padding:1px 6px;border-radius:20px;background:rgba(220,38,38,0.22);color:#fca5a5;border:1px solid rgba(220,38,38,0.22)}
+.nav-chip.a{background:rgba(245,158,11,0.18);color:#fcd34d;border-color:rgba(245,158,11,0.22)}
+.sb-user{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px}
+.av{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+.u-name{font-size:11.5px;color:#fff;font-weight:500}
+.u-role{font-size:10px;color:rgba(255,255,255,0.38)}
+
+/* ── Main ──────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:52px;flex-shrink:0}
+.tb-l{display:flex;align-items:center;gap:10px}
+.page-title{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.2px}
+.breadcrumb{font-size:12px;color:var(--text-dim)}
+.bc-link{color:var(--blue);cursor:pointer}
+.bc-link:hover{text-decoration:underline}
+.tb-r{display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--green-mid);padding:4px 10px;background:var(--green-light);border:1px solid rgba(26,107,60,0.18);border-radius:20px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green-xl);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(58,168,100,0.35)}50%{box-shadow:0 0 0 4px rgba(58,168,100,0)}}
+.date-chip{font-family:var(--mono);font-size:11px;color:var(--text-dim);padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm)}
+.icon-btn{width:32px;height:32px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--text-dim);position:relative;transition:all 0.15s}
+.icon-btn:hover{border-color:var(--green);color:var(--green)}
+.notif-badge{position:absolute;top:-4px;right:-4px;width:14px;height:14px;background:var(--red);border-radius:50%;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface)}
+
+/* ── Tabs ──────────────────────────────────────────────── */
+.tab-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 22px;flex-shrink:0}
+.tab{padding:10px 20px;font-size:12.5px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s}
+.tab:hover{color:var(--text-mid)}
+.tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:500}
+
+/* ── Steps ──────────────────────────────────────────────── */
+.steps-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 22px;flex-shrink:0;display:flex;align-items:center;gap:0}
+.step-item{display:flex;align-items:center;gap:10px}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;transition:all 0.25s}
+.step-num.done{background:var(--green);color:#fff}
+.step-num.active{background:var(--green);color:#fff;box-shadow:0 0 0 4px rgba(26,107,60,0.18)}
+.step-num.idle{background:var(--bg);color:var(--text-dim);border:1.5px solid var(--border)}
+.step-label{font-size:12px;font-weight:500;transition:color 0.25s}
+.step-label.active{color:var(--green)}
+.step-label.done{color:var(--green-mid)}
+.step-label.idle{color:var(--text-mute)}
+.step-line{flex:1;height:1.5px;background:var(--border);margin:0 14px;border-radius:1px;overflow:hidden;position:relative}
+.step-line-fill{position:absolute;left:0;top:0;height:100%;background:var(--green);border-radius:1px;transition:width 0.4s ease}
+
+/* ── Content layout ─────────────────────────────────────── */
+.content{flex:1;display:flex;overflow:hidden}
+.form-panel{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:16px}
+.form-panel::-webkit-scrollbar{width:4px}
+.form-panel::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:2px}
+
+/* ── Preview panel ──────────────────────────────────────── */
+.preview-panel{width:300px;min-width:300px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.pp-head{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.pp-title{font-size:12px;font-weight:500;color:var(--text-mid)}
+.pp-sub{font-size:11px;color:var(--text-mute);margin-top:2px}
+.pp-body{flex:1;overflow-y:auto;padding:16px}
+.pp-body::-webkit-scrollbar{width:3px}
+.pp-body::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:2px}
+
+/* ── Form cards ─────────────────────────────────────────── */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;animation:slideUp 0.25s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fc-head{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.fc-title{font-size:12.5px;font-weight:500;color:var(--text-mid);display:flex;align-items:center;gap:8px}
+.fc-step-dot{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fc-body{padding:16px}
+
+/* ── Search / scan ──────────────────────────────────────── */
+.scan-row{display:flex;gap:10px;margin-bottom:12px}
+.scan-wrap{position:relative;flex:1}
+.scan-input{width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--sans);font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s}
+.scan-input:focus{border-color:var(--green)}
+.scan-input::placeholder{color:var(--text-mute)}
+.scan-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text-dim);pointer-events:none}
+.scan-btn{display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:var(--r-md);font-family:var(--sans);font-size:12.5px;font-weight:500;cursor:pointer;background:var(--green);color:#fff;border:1px solid var(--green);white-space:nowrap;transition:all 0.15s}
+.scan-btn:hover{background:var(--green-mid)}
+
+/* ── Search results ─────────────────────────────────────── */
+.search-results{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.1);margin-bottom:12px;animation:slideUp 0.18s ease}
+.sr-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background 0.1s}
+.sr-item:last-child{border-bottom:none}
+.sr-item:hover{background:var(--green-light)}
+.sr-item.oos{opacity:0.55;cursor:not-allowed}
+.sr-item.oos:hover{background:var(--red-light)}
+.sr-name{font-size:13px;font-weight:500;color:var(--text)}
+.sr-sub{font-size:11px;color:var(--text-dim);margin-top:1px}
+.sr-stock-ok{font-family:var(--mono);font-size:12px;color:var(--green)}
+.sr-stock-low{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.sr-stock-oos{font-family:var(--mono);font-size:12px;color:var(--red)}
+.sr-cat{font-size:10.5px;color:var(--text-dim);margin-top:2px}
+
+/* ── Selected item ──────────────────────────────────────── */
+.selected-item{background:var(--green-light);border:1.5px solid rgba(26,107,60,0.28);border-radius:var(--r-lg);padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between}
+.si-name{font-size:13px;font-weight:500;color:var(--green)}
+.si-sub{font-size:11px;color:var(--green-mid);margin-top:2px}
+.si-badges{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.si-change{font-size:11px;color:var(--green-mid);cursor:pointer;text-decoration:underline;white-space:nowrap;margin-top:2px}
+
+/* ── FEFO batch selector ────────────────────────────────── */
+.batch-selector{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.batch-option{display:flex;align-items:center;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-md);cursor:pointer;background:var(--surface);transition:all 0.15s;gap:10px}
+.batch-option:hover{border-color:var(--green-mid);background:var(--green-light)}
+.batch-option.selected{border-color:var(--green);background:var(--green-light)}
+.batch-option.auto-selected{border-color:var(--green);background:var(--green-light)}
+.bo-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.batch-option.selected .bo-radio,.batch-option.auto-selected .bo-radio{border-color:var(--green);background:var(--green)}
+.bo-radio-dot{width:6px;height:6px;border-radius:50%;background:#fff;display:none}
+.batch-option.selected .bo-radio-dot,.batch-option.auto-selected .bo-radio-dot{display:block}
+.bo-info{flex:1}
+.bo-batch-num{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px}
+.bo-details{font-size:11px;color:var(--text-dim);margin-top:2px;display:flex;gap:10px}
+.bo-qty-avail{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;text-align:right}
+.bo-qty-unit{font-size:10px;color:var(--text-dim)}
+.fefo-tag{display:inline-flex;padding:1px 6px;border-radius:10px;font-size:9.5px;font-weight:600;background:var(--green);color:#fff}
+.fefo-note{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--green-light);border:1px solid rgba(26,107,60,0.2);border-radius:var(--r-sm);font-size:11px;color:var(--green-mid);margin-top:4px}
+
+/* ── Over-issue warning ─────────────────────────────────── */
+.over-issue-box{background:var(--red-light);border:1px solid rgba(185,28,28,0.25);border-radius:var(--r-md);padding:10px 12px;font-size:12px;color:var(--red);display:none}
+.over-issue-box.show{display:block}
+.below-min-box{background:var(--amber-light);border:1px solid rgba(146,64,14,0.25);border-radius:var(--r-md);padding:10px 12px;font-size:12px;color:var(--amber);display:none;margin-top:8px}
+.below-min-box.show{display:block}
+
+/* ── Qty input ──────────────────────────────────────────── */
+.qty-row{display:flex;gap:10px;align-items:flex-start}
+.qty-input-wrap{flex:1}
+.qty-big{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--mono);font-size:20px;font-weight:500;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s;text-align:center}
+.qty-big:focus{border-color:var(--green)}
+.qty-big.warn{border-color:var(--amber)}
+.qty-big.error{border-color:var(--red)}
+.qty-unit-label{display:flex;align-items:center;justify-content:center;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--mono);font-size:14px;font-weight:500;color:var(--text-mid);background:var(--bg);min-width:64px}
+.qty-hint{font-size:11px;color:var(--text-dim);margin-top:5px;text-align:center}
+.qty-hint.ok{color:var(--green)}
+.qty-hint.warn{color:var(--amber)}
+.qty-hint.error{color:var(--red)}
+
+/* ── Form fields ────────────────────────────────────────── */
+.field-grid{display:grid;gap:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11.5px;font-weight:500;color:var(--text-mid)}
+.req{color:var(--red);margin-left:2px}
+.field input,.field select,.field textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--sans);font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s}
+.field input:focus,.field select:focus{border-color:var(--green)}
+.field input::placeholder{color:var(--text-mute)}
+.field-hint{font-size:10.5px;color:var(--text-mute);margin-top:3px}
+
+/* ── Dept grid ──────────────────────────────────────────── */
+.dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.dept-option{padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r-md);cursor:pointer;background:var(--surface);transition:all 0.15s;text-align:center}
+.dept-option:hover{border-color:var(--green-mid);background:var(--green-light)}
+.dept-option.selected{border-color:var(--green);background:var(--green-light)}
+.dept-option-name{font-size:12px;font-weight:500;color:var(--text)}
+.dept-option-code{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:2px}
+
+/* ── Buttons ────────────────────────────────────────────── */
+.action-row{display:flex;gap:10px;align-items:center;margin-top:4px}
+.btn-cancel{padding:10px 20px;border-radius:var(--r-md);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text-dim);border:1.5px solid var(--border);transition:all 0.15s}
+.btn-cancel:hover{border-color:var(--border-2);color:var(--text)}
+.btn-back{padding:10px 20px;border-radius:var(--r-md);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text-mid);border:1.5px solid var(--border);transition:all 0.15s}
+.btn-back:hover{border-color:var(--green-mid);color:var(--text)}
+.btn-next{padding:10px 24px;border-radius:var(--r-md);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;background:var(--green);color:#fff;border:1.5px solid var(--green);transition:all 0.15s;margin-left:auto}
+.btn-next:hover{background:var(--green-mid)}
+.btn-next:disabled{background:var(--border-2);border-color:var(--border-2);color:var(--text-mute);cursor:not-allowed}
+.btn-issue{padding:10px 28px;border-radius:var(--r-md);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;background:var(--green);color:#fff;border:1.5px solid var(--green);transition:all 0.15s;margin-left:auto}
+.btn-issue:hover{background:var(--green-mid)}
+
+/* ── Badges ─────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:500;white-space:nowrap}
+.badge-opex{background:var(--green-light);color:var(--green);border:1px solid rgba(26,107,60,0.2)}
+.badge-capex{background:var(--blue-light);color:var(--blue);border:1px solid rgba(24,95,165,0.2)}
+.badge-sub{background:var(--bg);color:var(--text-mid);border:1px solid var(--border)}
+.badge-warn{background:var(--amber-light);color:var(--amber);border:1px solid rgba(146,64,14,0.2)}
+.badge-ok{background:var(--green-light);color:var(--green);border:1px solid rgba(26,107,60,0.2)}
+.badge-low{background:var(--red-light);color:var(--red);border:1px solid rgba(185,28,28,0.2)}
+
+/* ── Preview panel ──────────────────────────────────────── */
+.preview-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:var(--text-mute)}
+.pe-icon{font-size:32px;margin-bottom:10px;opacity:0.3}
+
+.stock-change-box{background:var(--red-light);border:1px solid rgba(185,28,28,0.18);border-radius:var(--r-md);padding:12px;margin-bottom:12px;text-align:center}
+.scb-label{font-size:11px;color:var(--red);margin-bottom:6px}
+.scb-values{display:flex;align-items:center;justify-content:center;gap:10px}
+.scb-old{font-family:var(--mono);font-size:18px;color:var(--text-dim)}
+.scb-arrow{font-size:16px;color:var(--text-dim)}
+.scb-new{font-family:var(--mono);font-size:22px;font-weight:500}
+.scb-new.ok{color:var(--green)}
+.scb-new.warn{color:var(--amber)}
+.scb-new.danger{color:var(--red)}
+.scb-diff{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--mono);background:rgba(185,28,28,0.12);color:var(--red)}
+.scb-unit{font-size:11px;color:var(--text-dim);margin-top:3px}
+
+.preview-section{margin-bottom:14px}
+.ps-title{font-size:10px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.ps-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.ps-row:last-child{border-bottom:none}
+.ps-lbl{color:var(--text-dim)}
+.ps-val{color:var(--text);font-weight:500;text-align:right}
+.ps-val.green{color:var(--green)}
+.ps-val.red{color:var(--red)}
+.ps-val.amber{color:var(--amber)}
+.ps-val.mono{font-family:var(--mono)}
+
+/* ── Confirm screen ─────────────────────────────────────── */
+.confirm-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.confirm-section-title{font-size:10px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.confirm-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.confirm-row:last-child{border-bottom:none}
+.cr-lbl{color:var(--text-dim)}
+.cr-val{color:var(--text);font-weight:500;text-align:right}
+
+.consequence-list{display:flex;flex-direction:column;gap:10px}
+.consequence-item{display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+.cons-num{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.cons-num.warn{background:var(--amber)}
+
+/* ── Success ────────────────────────────────────────────── */
+.success-card{background:var(--green);border-radius:var(--r-xl);padding:32px 24px;text-align:center;color:#fff;animation:slideUp 0.3s ease}
+.sc-icon{font-size:48px;margin-bottom:16px}
+.sc-title{font-size:20px;font-weight:600;margin-bottom:8px;font-family:var(--serif)}
+.sc-sub{font-size:13px;color:rgba(255,255,255,0.75);line-height:1.6;margin-bottom:24px}
+.sc-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.sc-btn{padding:10px 20px;border-radius:var(--r-md);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.sc-btn-white{background:#fff;color:var(--green);border:none}
+.sc-btn-white:hover{background:var(--green-light)}
+.sc-btn-outline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,0.4)}
+.sc-btn-outline:hover{background:rgba(255,255,255,0.1)}
+
+/* ── History table ──────────────────────────────────────── */
+.hist-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.hist-table th{background:var(--bg);padding:8px 12px;text-align:left;font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:0.4px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.hist-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.hist-table tr:hover td{background:var(--green-light);cursor:pointer}
+.hist-mono{font-family:var(--mono);font-size:11px}
+.hist-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500}
+.hb-opex{background:var(--green-light);color:var(--green);border:1px solid rgba(26,107,60,0.2)}
+.hb-capex{background:var(--blue-light);color:var(--blue);border:1px solid rgba(24,95,165,0.2)}
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ───────────────────────────────────────────────────── -->
+<aside class="sb">
+  <div class="logo-area">
+    <div class="logo-name">AyurVaidya</div>
+    <div class="logo-sub">All India Institute of<br>Ayurveda, Faridabad</div>
+    <div class="logo-pill">AIIA · AYUSH</div>
+  </div>
+  <nav>
+    <div class="nav-s">
+      <div class="nav-lbl">Main</div>
+      <div class="nav-i"><div class="nav-icon">▦</div>Dashboard</div>
+      <div class="nav-i"><div class="nav-icon">☰</div>Item Registry</div>
+      <div class="nav-i"><div class="nav-icon">↓</div>Stock Inward</div>
+      <div class="nav-i active"><div class="nav-icon" style="background:rgba(255,255,255,0.14)">↑</div>Stock Issue</div>
+    </div>
+    <div class="nav-s">
+      <div class="nav-lbl">Insights</div>
+      <div class="nav-i"><div class="nav-icon">⚑</div>Alerts<span class="nav-chip">22</span></div>
+      <div class="nav-i"><div class="nav-icon">≡</div>Reports</div>
+      <div class="nav-i"><div class="nav-icon">✦</div>AI Assistant</div>
+    </div>
+    <div class="nav-s">
+      <div class="nav-lbl">Category</div>
+      <div class="nav-i"><div class="nav-icon" style="color:#93c5fd">◈</div>CAPEX items<span class="nav-chip a">3 AMC</span></div>
+      <div class="nav-i"><div class="nav-icon" style="color:#86efac">◉</div>OPEX items<span class="nav-chip">7</span></div>
+    </div>
+  </nav>
+  <div class="sb-user">
+    <div class="av">RK</div>
+    <div><div class="u-name">Ramesh Kumar</div><div class="u-role">Store Manager</div></div>
+  </div>
+</aside>
+
+<!-- ── MAIN ──────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <header class="topbar">
+    <div class="tb-l">
+      <div class="page-title">Stock Issue</div>
+      <div class="breadcrumb">/ <span class="bc-link">Dashboard</span> / <span style="color:var(--text-mid)">New issue entry</span></div>
+    </div>
+    <div class="tb-r">
+      <div class="status-pill"><div class="pulse"></div>System online</div>
+      <div class="date-chip">21 Apr 2025</div>
+      <div class="icon-btn">🔔<div class="notif-badge">7</div></div>
+    </div>
+  </header>
+
+  <div class="tab-bar">
+    <div class="tab active" id="tab-new"     onclick="switchTab('new')">New issue entry</div>
+    <div class="tab"        id="tab-history" onclick="switchTab('history')">Issue history</div>
+  </div>
+
+  <div class="steps-bar" id="stepsBar">
+    <div class="step-item">
+      <div class="step-num active" id="snum1">1</div>
+      <div class="step-label active" id="slbl1">Find item</div>
+    </div>
+    <div class="step-line"><div class="step-line-fill" id="sline1" style="width:0%"></div></div>
+    <div class="step-item">
+      <div class="step-num idle" id="snum2">2</div>
+      <div class="step-label idle" id="slbl2">Select batch & quantity</div>
+    </div>
+    <div class="step-line"><div class="step-line-fill" id="sline2" style="width:0%"></div></div>
+    <div class="step-item">
+      <div class="step-num idle" id="snum3">3</div>
+      <div class="step-label idle" id="slbl3">Issue details</div>
+    </div>
+    <div class="step-line"><div class="step-line-fill" id="sline3" style="width:0%"></div></div>
+    <div class="step-item">
+      <div class="step-num idle" id="snum4">4</div>
+      <div class="step-label idle" id="slbl4">Confirm & issue</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Form panel -->
+    <div class="form-panel" id="formPanel">
+
+      <!-- ── STEP 1: Find item ───────────────────────────────────── -->
+      <div id="step1">
+        <div class="form-card" style="animation-delay:0.04s">
+          <div class="fc-head">
+            <div class="fc-title"><div class="fc-step-dot">1</div>Find item to issue</div>
+          </div>
+          <div class="fc-body">
+            <div class="scan-row">
+              <div class="scan-wrap">
+                <span class="scan-icon">🔍</span>
+                <input class="scan-input" type="text" id="searchInput"
+                  placeholder="Scan QR code, barcode, or type item name / ID…"
+                  oninput="handleSearch(this.value)" autocomplete="off">
+              </div>
+              <button class="scan-btn" onclick="simulateScan()">📷 Scan QR</button>
+            </div>
+            <div class="search-results" id="searchResults" style="display:none"></div>
+            <div class="selected-item" id="selectedItemCard" style="display:none">
+              <div>
+                <div class="si-name" id="si-name">—</div>
+                <div class="si-sub" id="si-sub">—</div>
+                <div class="si-badges" id="si-badges"></div>
+              </div>
+              <span class="si-change" onclick="clearItem()">Change item</span>
+            </div>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-cancel" onclick="resetAll()">Cancel</button>
+          <button class="btn-next" id="nextBtn1" onclick="goStep(2)" disabled>Next: Select batch & quantity →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 2: Batch & quantity ───────────────────────────── -->
+      <div id="step2" style="display:none">
+
+        <div class="selected-item" style="cursor:default">
+          <div>
+            <div class="si-name" id="s2-name">—</div>
+            <div class="si-sub"  id="s2-sub">—</div>
+            <div class="si-badges" id="s2-badges"></div>
+          </div>
+          <span class="si-change" onclick="goStep(1)">← Change item</span>
+        </div>
+
+        <!-- Batch selector with FEFO -->
+        <div class="form-card" style="animation-delay:0.04s">
+          <div class="fc-head">
+            <div class="fc-title"><div class="fc-step-dot">2</div>Select batch to issue from</div>
+            <span style="font-size:11px;color:var(--green-mid);background:var(--green-light);padding:3px 9px;border-radius:20px;border:1px solid rgba(26,107,60,0.2)">📋 FEFO order applied</span>
+          </div>
+          <div class="fc-body">
+            <div class="batch-selector" id="batchSelector"></div>
+            <div class="fefo-note" id="fefoNote" style="display:none">
+              <span style="font-size:14px">📋</span>
+              <span id="fefoNoteText">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quantity -->
+        <div class="form-card" style="animation-delay:0.08s">
+          <div class="fc-head">
+            <div class="fc-title">Quantity to issue</div>
+          </div>
+          <div class="fc-body">
+            <div class="qty-row">
+              <div class="qty-input-wrap">
+                <input type="number" class="qty-big" id="issueQty" placeholder="0" min="1" oninput="handleQtyChange()" autocomplete="off">
+                <div class="qty-hint" id="qtyHint">Enter the quantity to issue from the selected batch</div>
+              </div>
+              <div class="qty-unit-label" id="qtyUnitLabel">—</div>
+            </div>
+            <div class="over-issue-box" id="overIssueBox">
+              <strong>⚠ Quantity exceeds available batch stock</strong><br>
+              This batch only has <span id="overIssueMax">—</span> available. Reduce the quantity or split the issue across multiple batches.
+            </div>
+            <div class="below-min-box" id="belowMinBox">
+              <strong>⚠ Stock will fall below minimum level after this issue</strong><br>
+              After issuing, only <span id="belowMinRemain">—</span> will remain (minimum: <span id="belowMinMin">—</span>). Consider raising a purchase request.
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-back" onclick="goStep(1)">← Back</button>
+          <button class="btn-cancel" onclick="resetAll()">Cancel</button>
+          <button class="btn-next" id="nextBtn2" onclick="goStep(3)" disabled>Next: Issue details →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 3: Issue details ──────────────────────────────── -->
+      <div id="step3" style="display:none">
+
+        <div class="selected-item" style="cursor:default;margin-bottom:0">
+          <div>
+            <div class="si-name" id="s3-name">—</div>
+            <div class="si-sub"  id="s3-sub">—</div>
+            <div class="si-badges" id="s3-badges"></div>
+          </div>
+          <span class="si-change" onclick="goStep(2)">← Change quantity</span>
+        </div>
+
+        <div class="form-card" style="animation-delay:0.04s">
+          <div class="fc-head">
+            <div class="fc-title"><div class="fc-step-dot">3</div>Where is this being issued to?</div>
+          </div>
+          <div class="fc-body">
+            <div style="font-size:11.5px;font-weight:500;color:var(--text-mid);margin-bottom:10px">Select department / ward <span class="req">*</span></div>
+            <div class="dept-grid" id="deptGrid"></div>
+            <div class="field" style="margin-top:12px">
+              <label>Specific location (optional)</label>
+              <input type="text" id="specificLocation" placeholder="e.g. OPD Room 3, Ward B Nurses Station…">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card" style="animation-delay:0.08s">
+          <div class="fc-head">
+            <div class="fc-title">Issue authorisation & purpose</div>
+          </div>
+          <div class="fc-body">
+            <div class="field-grid g2" style="margin-bottom:14px">
+              <div class="field">
+                <label>Authorised by (doctor / HOD) <span class="req">*</span></label>
+                <input type="text" id="authorisedBy" placeholder="Dr. S. Verma" oninput="updatePreview()">
+              </div>
+              <div class="field">
+                <label>Purpose <span class="req">*</span></label>
+                <select id="purpose" onchange="updatePreview()">
+                  <option value="">Select purpose…</option>
+                  <option>Patient dispensing — OPD</option>
+                  <option>Patient dispensing — IPD</option>
+                  <option>Department restocking</option>
+                  <option>Panchakarma therapy</option>
+                  <option>Research / study</option>
+                  <option>Quality testing</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-grid g2">
+              <div class="field">
+                <label>Patient / reference ID (optional)</label>
+                <input type="text" id="patientId" placeholder="e.g. AIIA-PT-2025-0441" oninput="updatePreview()">
+              </div>
+              <div class="field">
+                <label>Issue date</label>
+                <input type="date" id="issueDate" value="2025-04-21" oninput="updatePreview()">
+              </div>
+            </div>
+            <div class="field" style="margin-top:14px">
+              <label>Notes / remarks</label>
+              <textarea id="notes" rows="2" placeholder="Any special instructions, prescription notes…" style="resize:vertical"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-back" onclick="goStep(2)">← Back</button>
+          <button class="btn-cancel" onclick="resetAll()">Cancel</button>
+          <button class="btn-next" id="nextBtn3" onclick="goStep(4)" disabled>Next: Review & confirm →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 4: Confirm & issue ────────────────────────────── -->
+      <div id="step4" style="display:none">
+
+        <div class="form-card" style="animation-delay:0.04s">
+          <div class="fc-head">
+            <div class="fc-title"><div class="fc-step-dot">4</div>Review & confirm issue</div>
+            <span style="font-size:11px;color:var(--text-dim)">Issue voucher # auto-generated on save</span>
+          </div>
+          <div class="fc-body">
+            <div class="confirm-two-col" id="confirmContent"></div>
+          </div>
+        </div>
+
+        <!-- What happens -->
+        <div class="form-card" style="animation-delay:0.08s;border-color:rgba(26,107,60,0.3)">
+          <div class="fc-head" style="background:var(--green-light)">
+            <div class="fc-title" style="color:var(--green)">What happens when you confirm</div>
+          </div>
+          <div class="fc-body">
+            <div class="consequence-list" id="consequenceList"></div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-back" onclick="goStep(3)">← Back</button>
+          <button class="btn-cancel" onclick="resetAll()">Cancel</button>
+          <button class="btn-issue" onclick="saveIssue()">✓ Confirm issue &amp; deduct stock</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 5: Success ────────────────────────────────────── -->
+      <div id="step5" style="display:none">
+        <div class="success-card">
+          <div class="sc-icon">✓</div>
+          <div class="sc-title">Stock issued successfully</div>
+          <div class="sc-sub" id="successMsg">Stock has been deducted and the issue has been recorded.</div>
+          <div class="sc-actions">
+            <button class="sc-btn sc-btn-white" onclick="printVoucher()">Print issue voucher</button>
+            <button class="sc-btn sc-btn-outline" onclick="resetAll()">Issue another item</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HISTORY VIEW ───────────────────────────────────────── -->
+      <div id="historyView" style="display:none">
+        <div class="form-card" style="animation-delay:0.04s">
+          <div class="fc-head">
+            <div class="fc-title">Stock issue history</div>
+            <div style="display:flex;gap:8px">
+              <input type="text" placeholder="Search issues…" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--sans);font-size:12px;outline:none;background:var(--bg);color:var(--text)">
+              <button style="padding:6px 12px;border-radius:var(--r-sm);font-family:var(--sans);font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--text-mid);cursor:pointer">↓ Export</button>
+            </div>
+          </div>
+          <div class="fc-body" style="padding:0">
+            <table class="hist-table">
+              <thead>
+                <tr>
+                  <th>Issue #</th><th>Date</th><th>Item</th><th>Cat.</th>
+                  <th>Batch</th><th>Qty issued</th><th>Department</th>
+                  <th>Authorised by</th><th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /form-panel -->
+
+    <!-- ── Preview panel ──────────────────────────────────────────── -->
+    <div class="preview-panel">
+      <div class="pp-head">
+        <div class="pp-title">Live preview</div>
+        <div class="pp-sub">Updates as you fill the form</div>
+      </div>
+      <div class="pp-body" id="previewBody">
+        <div class="preview-empty">
+          <div class="pe-icon">↑</div>
+          <div style="font-size:12px;line-height:1.6">Select an item, batch and quantity to see what will be deducted</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ── DATA ───────────────────────────────────────────────── */
+const ITEMS_DB = [
+  {id:'MED-001',name:'Ashwagandha Churna',sub:'Rasayana · Churna',category:'OPEX',subcat:'medicines',unit:'g',dept:'PHM',totalStock:5000,minStock:1000,
+   batches:[{batchNo:'ASH-2024-A1',qty:3200,expiry:'2026-05-31',status:'healthy'},{batchNo:'ASH-2025-B1',qty:1800,expiry:'2027-01-14',status:'healthy'}]},
+  {id:'MED-003',name:'Brahmi Tail',sub:'Nervine · Tail',category:'OPEX',subcat:'medicines',unit:'ml',dept:'PKM',totalStock:14500,minStock:500,
+   batches:[{batchNo:'BRT-2024-C1',qty:4500,expiry:'2026-05-09',status:'healthy'},{batchNo:'BRT-2025-D1',qty:10000,expiry:'2027-01-31',status:'healthy'}]},
+  {id:'MED-004',name:'Haritaki Churna',sub:'Digestive · Churna',category:'OPEX',subcat:'medicines',unit:'g',dept:'PHM',totalStock:1800,minStock:800,
+   batches:[{batchNo:'HAR-2024-D3',qty:1800,expiry:'2025-03-19',status:'expiring'}]},
+  {id:'MED-010',name:'Guduchi Churna',sub:'Immunomodulator · Churna',category:'OPEX',subcat:'medicines',unit:'g',dept:'KAY',totalStock:2500,minStock:1000,
+   batches:[{batchNo:'GUD-2024-J1',qty:800,expiry:'2025-06-30',status:'expiring'},{batchNo:'GUD-2024-J2',qty:1700,expiry:'2025-11-30',status:'healthy'}]},
+  {id:'CON-001',name:'Cotton Bandage (2 inch)',sub:'Wound Care · Consumable',category:'OPEX',subcat:'consumables',unit:'Rolls',dept:'PHM',totalStock:210,minStock:1000,
+   batches:[{batchNo:'JJ-CON-2024-01',qty:210,expiry:null,status:'low_stock'}]},
+  {id:'CON-004',name:'Surgical Gloves (M)',sub:'PPE · Consumable',category:'OPEX',subcat:'consumables',unit:'Pairs',dept:'PHM',totalStock:45,minStock:200,
+   batches:[{batchNo:'ANS-2024-M01',qty:45,expiry:'2025-12-31',status:'low_stock'}]},
+  {id:'DEV-001',name:'Digital BP Monitor (Adult)',sub:'Diagnostic · Omron HEM-7120',category:'CAPEX',subcat:'devices',unit:'Pcs',dept:'KAY',totalStock:4,minStock:2,
+   batches:[{batchNo:'OM-SN-001',qty:4,expiry:null,amcExpiry:'2026-03-14',status:'healthy'}]},
+  {id:'ELC-005',name:'Split AC 1.5 Ton',sub:'Air Conditioning · Daikin',category:'CAPEX',subcat:'electrical',unit:'Pcs',dept:'KAY',totalStock:2,minStock:1,
+   batches:[{batchNo:'DK-AC-001',qty:2,expiry:null,amcExpiry:'2025-06-14',status:'amc_due'}]},
+];
+
+const DEPTS = [
+  {name:'OPD — General',code:'OPD-GEN'},{name:'Pharmacy',code:'PHM'},
+  {name:'IPD Ward A',code:'IPD-A'},{name:'IPD Ward B',code:'IPD-B'},
+  {name:'Panchakarma',code:'PKM'},{name:'Shalakya (ENT & Eye)',code:'SHA'},
+  {name:'Kaumarabhritya',code:'KAU'},{name:'Striroga (OB-GYN)',code:'STR'},
+  {name:'Shalya (Surgery)',code:'SHY'},{name:'Laboratory',code:'LAB'},
+  {name:'Swastha Vritta',code:'SWA'},{name:'Research',code:'RES'},
+];
+
+const ISSUE_HISTORY = [
+  {iss:'ISS-2025-0061',date:'2025-04-21',item:'Brahmi Tail',cat:'OPEX',batch:'BRT-2024-C1',qty:'500 ml',dept:'Panchakarma',auth:'Dr. R. Sharma',purpose:'Panchakarma therapy'},
+  {iss:'ISS-2025-0060',date:'2025-04-20',item:'Ashwagandha Churna',cat:'OPEX',batch:'ASH-2024-A1',qty:'1,000 g',dept:'Pharmacy',auth:'Dr. S. Verma',purpose:'Patient dispensing — OPD'},
+  {iss:'ISS-2025-0059',date:'2025-04-18',item:'Guduchi Churna',cat:'OPEX',batch:'GUD-2024-J1',qty:'200 g',dept:'OPD — General',auth:'Dr. R. Sharma',purpose:'Patient dispensing — OPD'},
+  {iss:'ISS-2025-0058',date:'2025-04-17',item:'Cotton Bandage (2 inch)',cat:'OPEX',batch:'JJ-CON-2024-01',qty:'50 Rolls',dept:'Shalya (Surgery)',auth:'Dr. K. Singh',purpose:'Department restocking'},
+  {iss:'ISS-2025-0057',date:'2025-04-15',item:'Surgical Gloves (M)',cat:'OPEX',batch:'ANS-2024-M01',qty:'20 Pairs',dept:'IPD Ward A',auth:'Sr. Nurse Meena',purpose:'Patient dispensing — IPD'},
+  {iss:'ISS-2025-0056',date:'2025-04-14',item:'Digital BP Monitor',cat:'CAPEX',batch:'OM-SN-001',qty:'1 Pcs',dept:'OPD — General',auth:'Dr. S. Verma',purpose:'Department restocking'},
+];
+
+/* ── STATE ──────────────────────────────────────────────── */
+let selectedItem = null;
+let selectedBatch = null;
+let selectedDept  = null;
+let currentStep   = 1;
+let activeTab     = 'new';
+
+/* ── TABS ───────────────────────────────────────────────── */
+function switchTab(tab) {
+  activeTab = tab;
+  ['new','history'].forEach(t => document.getElementById('tab-'+t).classList.toggle('active', t===tab));
+  document.getElementById('stepsBar').style.display = tab==='new' ? 'flex' : 'none';
+  if (tab === 'history') {
+    ['step1','step2','step3','step4','step5'].forEach(s => { const el=document.getElementById(s); if(el) el.style.display='none'; });
+    document.getElementById('historyView').style.display = '';
+    renderHistory();
+  } else {
+    document.getElementById('historyView').style.display = 'none';
+    goStep(currentStep);
+  }
+}
+
+/* ── STEPS ──────────────────────────────────────────────── */
+function goStep(n) {
+  currentStep = n;
+  for (let i=1; i<=5; i++) { const el = document.getElementById('step'+i); if(el) el.style.display='none'; }
+  const el = document.getElementById('step'+n); if(el) el.style.display='';
+  document.getElementById('historyView').style.display = 'none';
+
+  for (let i=1; i<=4; i++) {
+    const numEl = document.getElementById('snum'+i);
+    const lblEl = document.getElementById('slbl'+i);
+    if (!numEl) continue;
+    if (i < n)       { numEl.className='step-num done'; numEl.textContent='✓'; lblEl.className='step-label done'; }
+    else if (i === n){ numEl.className='step-num active'; numEl.textContent=i;  lblEl.className='step-label active'; }
+    else             { numEl.className='step-num idle'; numEl.textContent=i;   lblEl.className='step-label idle'; }
+    if (i <= 3) { const line = document.getElementById('sline'+i); if(line) line.style.width = i<n?'100%':'0%'; }
+  }
+
+  if (n === 2 && selectedItem) populateStep2();
+  if (n === 3 && selectedItem) populateStep3();
+  if (n === 4) buildConfirm();
+  if (n === 5) document.getElementById('stepsBar').style.display = 'none';
+}
+
+/* ── SEARCH ─────────────────────────────────────────────── */
+function handleSearch(val) {
+  const results = document.getElementById('searchResults');
+  if (!val.trim()) { results.style.display='none'; return; }
+  const matches = ITEMS_DB.filter(i =>
+    i.name.toLowerCase().includes(val.toLowerCase()) ||
+    i.id.toLowerCase().includes(val.toLowerCase())
+  );
+  if (!matches.length) { results.style.display='none'; return; }
+  results.style.display = '';
+  results.innerHTML = matches.map(item => {
+    const isOOS = item.totalStock === 0;
+    const stockCls = isOOS ? 'sr-stock-oos' : item.totalStock <= item.minStock ? 'sr-stock-low' : 'sr-stock-ok';
+    const stockLbl = isOOS ? 'Out of stock' : item.totalStock.toLocaleString()+' '+item.unit;
+    return `<div class="sr-item${isOOS?' oos':''}" onclick="${isOOS?'':("selectItem('"+item.id+"')")}">
+      <div>
+        <div class="sr-name">${item.name}</div>
+        <div class="sr-sub">${item.sub} · ${item.dept}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="${stockCls}">${stockLbl}</div>
+        <div class="sr-cat">${item.category} · ${item.subcat}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectItem(id) {
+  selectedItem = ITEMS_DB.find(i => i.id === id);
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('searchInput').value = selectedItem.name;
+  const card = document.getElementById('selectedItemCard');
+  card.style.display = 'flex';
+  document.getElementById('si-name').textContent = selectedItem.name;
+  document.getElementById('si-sub').textContent  = selectedItem.id+' · '+selectedItem.sub;
+  const stockStatus = selectedItem.totalStock <= selectedItem.minStock ? 'badge-warn' : 'badge-ok';
+  document.getElementById('si-badges').innerHTML =
+    `<span class="badge ${selectedItem.category==='CAPEX'?'badge-capex':'badge-opex'}">${selectedItem.category}</span>`+
+    `<span class="badge badge-sub">${selectedItem.subcat}</span>`+
+    `<span class="badge ${stockStatus}">${selectedItem.totalStock.toLocaleString()} ${selectedItem.unit} in stock</span>`;
+  document.getElementById('nextBtn1').disabled = false;
+  updatePreview();
+}
+
+function simulateScan() {
+  document.getElementById('searchInput').value = 'Brahmi Tail';
+  selectItem('MED-003');
+}
+
+function clearItem() {
+  selectedItem = null; selectedBatch = null; selectedDept = null;
+  document.getElementById('searchInput').value = '';
+  document.getElementById('selectedItemCard').style.display = 'none';
+  document.getElementById('nextBtn1').disabled = true;
+  updatePreview();
+}
+
+/* ── STEP 2: BATCHES ────────────────────────────────────── */
+function populateStep2() {
+  if (!selectedItem) return;
+  document.getElementById('s2-name').textContent = selectedItem.name;
+  document.getElementById('s2-sub').textContent  = selectedItem.id+' · '+selectedItem.sub;
+  document.getElementById('s2-badges').innerHTML =
+    `<span class="badge ${selectedItem.category==='CAPEX'?'badge-capex':'badge-opex'}">${selectedItem.category}</span>`+
+    `<span class="badge badge-sub">${selectedItem.subcat}</span>`+
+    `<span class="badge badge-sub">${selectedItem.totalStock.toLocaleString()} ${selectedItem.unit} total stock</span>`;
+
+  // Sort batches FEFO
+  const batches = fefoSort(selectedItem);
+  const container = document.getElementById('batchSelector');
+
+  container.innerHTML = batches.map((b, i) => {
+    const isFefo = selectedItem.category==='OPEX' && i===0 && batches.length>1;
+    const expTxt = b.expiry ? new Date(b.expiry).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : (b.amcExpiry ? 'AMC: '+new Date(b.amcExpiry).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'No expiry');
+    const statusDot = b.status==='expiring'?'🟡':b.status==='expired'?'🔴':b.status==='low_stock'?'🟠':'🟢';
+    const autoSel = i===0 ? ' auto-selected' : '';
+    return `<div class="batch-option${autoSel}" id="bopt-${i}" onclick="selectBatch(${i})" data-idx="${i}">
+      <div class="bo-radio"><div class="bo-radio-dot"></div></div>
+      <div class="bo-info">
+        <div class="bo-batch-num">
+          ${statusDot} ${b.batchNo}
+          ${isFefo?'<span class="fefo-tag">FEFO — issue this first</span>':''}
+        </div>
+        <div class="bo-details">
+          <span>Expiry: ${expTxt}</span>
+          ${b.status==='expiring'?'<span style="color:var(--amber)">⏰ Expiring soon</span>':''}
+          ${b.status==='low_stock'?'<span style="color:var(--red)">📉 Low stock</span>':''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="bo-qty-avail">${b.qty.toLocaleString()}</div>
+        <div class="bo-qty-unit">${selectedItem.unit} available</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Auto-select first (FEFO)
+  selectedBatch = batches[0];
+  document.getElementById('qtyUnitLabel').textContent = selectedItem.unit;
+
+  // FEFO note
+  const fefoNote = document.getElementById('fefoNote');
+  if (batches.length > 1 && selectedItem.category === 'OPEX') {
+    fefoNote.style.display = 'flex';
+    document.getElementById('fefoNoteText').textContent =
+      `FEFO order applied. ${batches[0].batchNo} expires first (${new Date(batches[0].expiry).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}) and should be issued first. You can override by selecting a different batch.`;
+  } else {
+    fefoNote.style.display = 'none';
+  }
+
+  handleQtyChange();
+}
+
+function fefoSort(item) {
+  const b = [...item.batches];
+  if (item.category === 'OPEX') {
+    b.sort((a,c) => { if(!a.expiry&&!c.expiry)return 0; if(!a.expiry)return 1; if(!c.expiry)return -1; return new Date(a.expiry)-new Date(c.expiry); });
+  }
+  return b;
+}
+
+function selectBatch(idx) {
+  const batches = fefoSort(selectedItem);
+  selectedBatch = batches[idx];
+  document.querySelectorAll('.batch-option').forEach((el,i) => {
+    el.classList.toggle('selected', i===idx);
+    el.classList.remove('auto-selected');
+  });
+  handleQtyChange();
+}
+
+/* ── QTY HANDLING ───────────────────────────────────────── */
+function handleQtyChange() {
+  if (!selectedBatch || !selectedItem) return;
+  const qty      = parseInt(document.getElementById('issueQty').value)||0;
+  const avail    = selectedBatch.qty;
+  const newTotal = selectedItem.totalStock - qty;
+  const qtyInput = document.getElementById('issueQty');
+  const hint     = document.getElementById('qtyHint');
+  const overBox  = document.getElementById('overIssueBox');
+  const belowBox = document.getElementById('belowMinBox');
+  const nextBtn  = document.getElementById('nextBtn2');
+
+  if (qty <= 0) {
+    qtyInput.className='qty-big'; hint.className='qty-hint';
+    hint.textContent='Available in this batch: '+avail.toLocaleString()+' '+selectedItem.unit;
+    overBox.classList.remove('show'); belowBox.classList.remove('show');
+    nextBtn.disabled=true; updatePreview(); return;
+  }
+
+  if (qty > avail) {
+    qtyInput.className='qty-big error'; hint.className='qty-hint error';
+    hint.textContent='Cannot exceed '+avail.toLocaleString()+' '+selectedItem.unit+' available in this batch';
+    overBox.classList.add('show');
+    document.getElementById('overIssueMax').textContent=avail.toLocaleString()+' '+selectedItem.unit;
+    belowBox.classList.remove('show'); nextBtn.disabled=true;
+  } else if (newTotal < selectedItem.minStock) {
+    qtyInput.className='qty-big warn'; hint.className='qty-hint warn';
+    hint.textContent='Stock will fall below minimum after this issue';
+    overBox.classList.remove('show'); belowBox.classList.add('show');
+    document.getElementById('belowMinRemain').textContent=(newTotal).toLocaleString()+' '+selectedItem.unit;
+    document.getElementById('belowMinMin').textContent=selectedItem.minStock.toLocaleString()+' '+selectedItem.unit;
+    nextBtn.disabled=false;
+  } else {
+    qtyInput.className='qty-big'; hint.className='qty-hint ok';
+    hint.textContent='\u2713 '+(avail-qty).toLocaleString()+' '+selectedItem.unit+' will remain in this batch';
+    overBox.classList.remove('show'); belowBox.classList.remove('show');
+    nextBtn.disabled=false;
+  }
+  updatePreview();
+}
+
+/* ── STEP 3: ISSUE DETAILS ──────────────────────────────── */
+function populateStep3() {
+  if (!selectedItem) return;
+  document.getElementById('s3-name').textContent = selectedItem.name;
+  document.getElementById('s3-sub').textContent  = selectedItem.id+' · '+selectedItem.sub;
+  const qty = parseInt(document.getElementById('issueQty').value)||0;
+  document.getElementById('s3-badges').innerHTML =
+    `<span class="badge ${selectedItem.category==='CAPEX'?'badge-capex':'badge-opex'}">${selectedItem.category}</span>`+
+    `<span class="badge badge-sub">${selectedBatch?.batchNo||'—'}</span>`+
+    `<span class="badge badge-low">-${qty.toLocaleString()} ${selectedItem.unit}</span>`;
+
+  // Dept grid
+  const grid = document.getElementById('deptGrid');
+  grid.innerHTML = DEPTS.map((d,i) => `
+    <div class="dept-option" id="dopt-${i}" onclick="selectDept(${i})">
+      <div class="dept-option-name">${d.name}</div>
+      <div class="dept-option-code">${d.code}</div>
+    </div>
+  `).join('');
+
+  checkStep3Validity();
+}
+
+function selectDept(idx) {
+  selectedDept = DEPTS[idx];
+  document.querySelectorAll('.dept-option').forEach((el,i) => el.classList.toggle('selected', i===idx));
+  checkStep3Validity();
+  updatePreview();
+}
+
+function checkStep3Validity() {
+  const auth    = document.getElementById('authorisedBy')?.value?.trim();
+  const purpose = document.getElementById('purpose')?.value;
+  const btn     = document.getElementById('nextBtn3');
+  if (btn) btn.disabled = !(selectedDept && auth && purpose);
+}
+
+document.addEventListener('input', e => {
+  if (['authorisedBy','purpose'].includes(e.target.id)) checkStep3Validity();
+});
+
+/* ── CONFIRM SCREEN ─────────────────────────────────────── */
+function buildConfirm() {
+  if (!selectedItem) return;
+  const qty     = parseInt(document.getElementById('issueQty').value)||0;
+  const batch   = selectedBatch?.batchNo||'—';
+  const dept    = selectedDept?.name||'—';
+  const auth    = document.getElementById('authorisedBy').value||'—';
+  const purpose = document.getElementById('purpose').value||'—';
+  const patId   = document.getElementById('patientId').value||'—';
+  const loc     = document.getElementById('specificLocation').value||'—';
+  const date    = document.getElementById('issueDate').value;
+  const newTotal= selectedItem.totalStock - qty;
+  const batchLeft = (selectedBatch?.qty||0) - qty;
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+
+  const rows = arr => arr.map(([l,v,c]) =>
+    `<div class="confirm-row"><span class="cr-lbl">${l}</span><span class="cr-val" style="${c?'color:'+c:''}">${v}</span></div>`
+  ).join('');
+
+  document.getElementById('confirmContent').innerHTML = `
+    <div>
+      <div class="confirm-section-title">Item & batch</div>
+      ${rows([
+        ['Item name', selectedItem.name],
+        ['Item ID', selectedItem.id],
+        ['Batch', batch, 'var(--mono)'],
+        ['Quantity issued', qty.toLocaleString()+' '+selectedItem.unit, 'var(--red)'],
+        ['Remaining in batch', batchLeft.toLocaleString()+' '+selectedItem.unit, batchLeft<0?'var(--red)':'var(--green)'],
+        ['Total stock after', newTotal.toLocaleString()+' '+selectedItem.unit, newTotal<selectedItem.minStock?'var(--amber)':'var(--green)'],
+      ])}
+    </div>
+    <div>
+      <div class="confirm-section-title">Issue details</div>
+      ${rows([
+        ['Department', dept],
+        ['Location', loc],
+        ['Authorised by', auth],
+        ['Purpose', purpose],
+        ['Patient / ref ID', patId],
+        ['Issue date', fmtDate(date)],
+      ])}
+    </div>
+  `;
+
+  const newTotalOK = newTotal >= selectedItem.minStock;
+  document.getElementById('consequenceList').innerHTML = `
+    <div class="consequence-item">
+      <div class="cons-num">1</div>
+      <div><strong style="color:var(--text)">Stock deducted immediately</strong><br>
+      <span style="color:var(--text-dim)">${selectedItem.name} drops from ${selectedItem.totalStock.toLocaleString()} to ${newTotal.toLocaleString()} ${selectedItem.unit}</span></div>
+    </div>
+    <div class="consequence-item">
+      <div class="cons-num">2</div>
+      <div><strong style="color:var(--text)">Batch ${batch} updated</strong><br>
+      <span style="color:var(--text-dim)">Remaining in batch: ${batchLeft.toLocaleString()} ${selectedItem.unit}${batchLeft===0?' — batch fully consumed, will be retired':''}</span></div>
+    </div>
+    <div class="consequence-item">
+      <div class="cons-num ${newTotalOK?'':'warn'}">3</div>
+      <div><strong style="color:var(--text)">Issue log entry created</strong><br>
+      <span style="color:var(--text-dim)">Logged to ${dept} · Authorised by ${auth} · For: ${purpose}</span></div>
+    </div>
+    ${!newTotalOK ? `<div class="consequence-item">
+      <div class="cons-num warn">⚠</div>
+      <div><strong style="color:var(--amber)">Low stock alert will fire</strong><br>
+      <span style="color:var(--text-dim)">After this issue, stock (${newTotal.toLocaleString()} ${selectedItem.unit}) falls below minimum (${selectedItem.minStock.toLocaleString()} ${selectedItem.unit}). Raise a purchase request.</span></div>
+    </div>` : ''}
+  `;
+}
+
+/* ── SAVE ───────────────────────────────────────────────── */
+function saveIssue() {
+  const qty  = parseInt(document.getElementById('issueQty').value)||0;
+  const dept = selectedDept?.name||'—';
+  document.getElementById('successMsg').textContent =
+    `ISS-2025-0062 recorded. ${qty.toLocaleString()} ${selectedItem.unit} of ${selectedItem.name} issued to ${dept}. Issue voucher is ready to print.`;
+  goStep(5);
+}
+
+function printVoucher() { alert('Sending issue voucher to printer…'); }
+
+/* ── PREVIEW ────────────────────────────────────────────── */
+function updatePreview() {
+  const body = document.getElementById('previewBody');
+  if (!selectedItem) {
+    body.innerHTML='<div class="preview-empty"><div class="pe-icon">↑</div><div style="font-size:12px;line-height:1.6">Select an item, batch and quantity to see what will be deducted</div></div>';
+    return;
+  }
+  const qty      = parseInt(document.getElementById('issueQty')?.value)||0;
+  const newTotal = selectedItem.totalStock - qty;
+  const batchLeft= (selectedBatch?.qty||0) - qty;
+  const dept     = selectedDept?.name||'—';
+  const auth     = document.getElementById('authorisedBy')?.value||'—';
+  const purpose  = document.getElementById('purpose')?.value||'—';
+  const newCls   = newTotal < 0 ? 'danger' : newTotal < selectedItem.minStock ? 'warn' : 'ok';
+
+  body.innerHTML = `
+    <div class="stock-change-box">
+      <div class="scb-label">Stock after this issue</div>
+      <div class="scb-values">
+        <div class="scb-old">${selectedItem.totalStock.toLocaleString()}</div>
+        <div class="scb-arrow">→</div>
+        <div class="scb-new ${newCls}">${newTotal.toLocaleString()}</div>
+      </div>
+      <div class="scb-unit">${selectedItem.unit}</div>
+      ${qty>0?'<div class="scb-diff">−'+qty.toLocaleString()+' '+selectedItem.unit+'</div>':''}
+    </div>
+    <div class="preview-section">
+      <div class="ps-title">Item</div>
+      <div class="ps-row"><span class="ps-lbl">Name</span><span class="ps-val">${selectedItem.name}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Category</span><span class="ps-val">${selectedItem.category} · ${selectedItem.subcat}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Dept</span><span class="ps-val">${selectedItem.dept}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Current stock</span><span class="ps-val mono">${selectedItem.totalStock.toLocaleString()} ${selectedItem.unit}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Min stock level</span><span class="ps-val mono">${selectedItem.minStock.toLocaleString()} ${selectedItem.unit}</span></div>
+    </div>
+    ${selectedBatch ? `<div class="preview-section">
+      <div class="ps-title">Selected batch</div>
+      <div class="ps-row"><span class="ps-lbl">Batch no.</span><span class="ps-val mono">${selectedBatch.batchNo}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Available</span><span class="ps-val mono">${selectedBatch.qty.toLocaleString()} ${selectedItem.unit}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Issuing</span><span class="ps-val red mono">${qty>0?'−'+qty.toLocaleString()+' '+selectedItem.unit:'—'}</span></div>
+      <div class="ps-row"><span class="ps-lbl">Remaining</span><span class="ps-val ${batchLeft<0?'red':batchLeft<20?'amber':'green'} mono">${batchLeft.toLocaleString()} ${selectedItem.unit}</span></div>
+    </div>` : ''}
+    ${dept!=='—'||auth!=='—'||purpose!=='—' ? `<div class="preview-section">
+      <div class="ps-title">Issue details</div>
+      ${dept!=='—'?`<div class="ps-row"><span class="ps-lbl">Department</span><span class="ps-val">${dept}</span></div>`:''}
+      ${auth!=='—'?`<div class="ps-row"><span class="ps-lbl">Authorised by</span><span class="ps-val">${auth}</span></div>`:''}
+      ${purpose!=='—'?`<div class="ps-row"><span class="ps-lbl">Purpose</span><span class="ps-val">${purpose}</span></div>`:''}
+    </div>` : ''}
+    ${qty>0&&newTotal<selectedItem.minStock?`<div style="background:var(--amber-light);border:1px solid rgba(146,64,14,0.2);border-radius:var(--r-md);padding:9px 11px;font-size:11.5px;color:var(--amber)">⚠ After this issue, stock falls below the minimum level of ${selectedItem.minStock.toLocaleString()} ${selectedItem.unit}. Raise a purchase request.</div>`:''}
+  `;
+}
+
+/* ── HISTORY ────────────────────────────────────────────── */
+function renderHistory() {
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = ISSUE_HISTORY.map(r => `
+    <tr>
+      <td class="hist-mono">${r.iss}</td>
+      <td class="hist-mono">${new Date(r.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td style="font-weight:500">${r.item}</td>
+      <td><span class="hist-badge ${r.cat==='OPEX'?'hb-opex':'hb-capex'}">${r.cat}</span></td>
+      <td class="hist-mono">${r.batch}</td>
+      <td class="hist-mono" style="color:var(--red)">−${r.qty}</td>
+      <td>${r.dept}</td>
+      <td>${r.auth}</td>
+      <td style="color:var(--text-dim)">${r.purpose}</td>
+    </tr>
+  `).join('');
+}
+
+/* ── RESET ──────────────────────────────────────────────── */
+function resetAll() {
+  selectedItem = null; selectedBatch = null; selectedDept = null;
+  document.getElementById('searchInput').value = '';
+  document.getElementById('selectedItemCard').style.display = 'none';
+  document.getElementById('nextBtn1').disabled = true;
+  ['issueQty','authorisedBy','specificLocation','patientId','notes'].forEach(id => {
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const pur = document.getElementById('purpose'); if(pur) pur.value='';
+  document.getElementById('stepsBar').style.display='flex';
+  activeTab='new';
+  ['tab-new','tab-history'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i===0));
+  document.getElementById('historyView').style.display='none';
+  goStep(1);
+}
+
+/* ── INIT ───────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', ()=>{ goStep(1); });
+</script>
+</body>
+</html>

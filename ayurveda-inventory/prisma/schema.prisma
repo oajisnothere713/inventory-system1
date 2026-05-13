@@ -1,0 +1,532 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ============================================================
+// AyurVaidya — Prisma Schema
+// All India Institute of Ayurveda (AIIA), Faridabad
+// Generated from AyurVaidya_DB_Schema.xlsx
+// ============================================================
+
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum DeptCategory {
+  clinical
+  admin
+  lab
+  pharmacy
+  other
+}
+
+enum SupplierType {
+  manufacturer
+  distributor
+  local
+  govt_body
+  other
+}
+
+enum UserRole {
+  admin
+  store_manager
+  doctor
+  department_head
+  viewer
+}
+
+enum ItemCategory {
+  OPEX
+  CAPEX
+}
+
+enum ItemSubCategory {
+  medicines
+  consumables
+  devices
+  electrical
+}
+
+enum BatchStatus {
+  active
+  expiring
+  expired
+  depleted
+  disposed
+}
+
+enum QualityStatus {
+  accepted
+  rejected
+  partial
+}
+
+enum IssuePurpose {
+  patient_opd
+  patient_ipd
+  dept_restock
+  panchakarma
+  research
+  quality_test
+  other
+}
+
+enum AmcCoverageType {
+  comprehensive
+  non_comprehensive
+  parts_only
+  labour_only
+}
+
+enum AmcStatus {
+  active
+  expired
+  renewed
+  cancelled
+}
+
+enum AlertType {
+  expiry_30d
+  expiry_60d
+  expiry_90d
+  expired
+  low_stock
+  amc_30d
+  amc_60d
+  amc_90d
+  amc_expired
+  dead_stock
+  anomaly
+}
+
+enum AlertSeverity {
+  critical
+  high
+  medium
+  low
+}
+
+enum AlertStatus {
+  active
+  acknowledged
+  resolved
+  snoozed
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+}
+
+enum DisposalReason {
+  expired
+  damaged
+  quality_fail
+  contaminated
+  other
+}
+
+enum DisposalMethod {
+  incineration
+  return_to_supplier
+  govt_disposal
+  other
+}
+
+enum ReportType {
+  stock_report
+  expiry_report
+  consumption_report
+  grn_report
+  issue_report
+  amc_report
+  wastage_report
+  dead_stock_report
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+enum OutputFormat {
+  xlsx
+  pdf
+  csv
+}
+
+enum ScheduleFrequency {
+  daily
+  weekly
+  monthly
+  quarterly
+}
+
+// ─────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────
+
+model Department {
+  deptId        Int          @id @default(autoincrement()) @map("dept_id")
+  deptCode      String       @unique @map("dept_code") @db.VarChar(10)
+  deptName      String       @map("dept_name") @db.VarChar(100)
+  deptNameHi    String?      @map("dept_name_hi") @db.VarChar(200)
+  category      DeptCategory @default(clinical)
+  floorLocation String?      @map("floor_location") @db.VarChar(100)
+  hodName       String?      @map("hod_name") @db.VarChar(150)
+  contactPhone  String?      @map("contact_phone") @db.VarChar(15)
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  users        User[]
+  items        Item[]
+  stockIssues  StockIssue[]
+
+  @@map("departments")
+}
+
+model Supplier {
+  supplierId    Int          @id @default(autoincrement()) @map("supplier_id")
+  supplierCode  String       @unique @map("supplier_code") @db.VarChar(10)
+  supplierName  String       @map("supplier_name") @db.VarChar(200)
+  supplierType  SupplierType @default(distributor) @map("supplier_type")
+  gstNumber     String?      @unique @map("gst_number") @db.VarChar(20)
+  panNumber     String?      @map("pan_number") @db.VarChar(12)
+  contactPerson String?      @map("contact_person") @db.VarChar(150)
+  contactPhone  String?      @map("contact_phone") @db.VarChar(15)
+  contactEmail  String?      @map("contact_email") @db.VarChar(200)
+  addressLine1  String?      @map("address_line1") @db.VarChar(300)
+  city          String?      @db.VarChar(100)
+  state         String?      @db.VarChar(100)
+  pincode       String?      @db.VarChar(10)
+  paymentTerms  String?      @map("payment_terms") @db.VarChar(200)
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  items        Item[]         @relation("DefaultSupplier")
+  grnEntries   GrnEntry[]
+  itemBatches  ItemBatch[]
+  amcContracts AmcContract[]
+
+  @@map("suppliers")
+}
+
+model User {
+  userId        Int      @id @default(autoincrement()) @map("user_id")
+  employeeId    String   @unique @map("employee_id") @db.VarChar(20)
+  fullName      String   @map("full_name") @db.VarChar(200)
+  username      String   @unique @db.VarChar(50)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  role          UserRole @default(viewer)
+  deptId        Int?     @map("dept_id")
+  email         String?  @unique @db.VarChar(200)
+  phone         String?  @db.VarChar(15)
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  department         Department?      @relation(fields: [deptId], references: [deptId])
+  itemsCreated       Item[]
+  grnReceived        GrnEntry[]       @relation("ReceivedBy")
+  grnVerified        GrnEntry[]       @relation("VerifiedBy")
+  issuesAuthorised   StockIssue[]     @relation("AuthorisedBy")
+  issuesProcessed    StockIssue[]     @relation("IssuedBy")
+  amcContracts       AmcContract[]
+  alertsAcknowledged Alert[]
+  auditLogs          AuditLog[]
+  disposals          DisposalLog[]
+  reportTemplates    ReportTemplate[]
+
+  @@map("users")
+}
+
+model Item {
+  itemId             Int             @id @default(autoincrement()) @map("item_id")
+  itemCode           String          @unique @map("item_code") @db.VarChar(20)
+  itemName           String          @map("item_name") @db.VarChar(200)
+  itemNameHi         String?         @map("item_name_hi") @db.VarChar(300)
+  category           ItemCategory
+  subCategory        ItemSubCategory @map("sub_category")
+  itemType           String?         @map("item_type") @db.VarChar(100)
+  description        String?         @db.Text
+  unit               String          @db.VarChar(20)
+  primaryDeptId      Int             @map("primary_dept_id")
+  defaultSupplierId  Int?            @map("default_supplier_id")
+  minStockLevel      Decimal         @default(0) @map("min_stock_level") @db.Decimal(10, 3)
+  maxStockLevel      Decimal?        @map("max_stock_level") @db.Decimal(10, 3)
+  reorderQty         Decimal?        @map("reorder_qty") @db.Decimal(10, 3)
+  shelfLifeMonths    Int?            @map("shelf_life_months")
+  storageConditions  String?         @map("storage_conditions") @db.VarChar(200)
+  hsnCode            String?         @map("hsn_code") @db.VarChar(20)
+  pricePerUnit       Decimal?        @map("price_per_unit") @db.Decimal(10, 2)
+  qrCode             String?         @unique @map("qr_code") @db.VarChar(100)
+  supplierBarcode    String?         @map("supplier_barcode") @db.VarChar(100)
+  hasExpiry          Boolean         @default(true) @map("has_expiry")
+  hasAmc             Boolean         @default(false) @map("has_amc")
+  isActive           Boolean         @default(true) @map("is_active")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  createdBy          Int             @map("created_by")
+
+  // Relations
+  primaryDept       Department    @relation(fields: [primaryDeptId], references: [deptId])
+  defaultSupplier   Supplier?     @relation("DefaultSupplier", fields: [defaultSupplierId], references: [supplierId])
+  creator           User          @relation(fields: [createdBy], references: [userId])
+  itemBatches       ItemBatch[]
+  grnEntries        GrnEntry[]
+  stockIssues       StockIssue[]
+  amcContracts      AmcContract[]
+  alerts            Alert[]
+  disposals         DisposalLog[]
+
+  @@map("items")
+}
+
+model ItemBatch {
+  batchId           Int         @id @default(autoincrement()) @map("batch_id")
+  itemId            Int         @map("item_id")
+  batchNumber       String      @map("batch_number") @db.VarChar(100)
+  quantityReceived  Decimal     @map("quantity_received") @db.Decimal(10, 3)
+  quantityAvailable Decimal     @map("quantity_available") @db.Decimal(10, 3)
+  mfgDate           DateTime?   @map("mfg_date") @db.Date
+  expiryDate        DateTime?   @map("expiry_date") @db.Date
+  grnId             Int         @map("grn_id")
+  supplierId        Int?        @map("supplier_id")
+  purchasePrice     Decimal?    @map("purchase_price") @db.Decimal(10, 2)
+  storageLocation   String?     @map("storage_location") @db.VarChar(200)
+  serialNumbers     String?     @map("serial_numbers") @db.Text
+  status            BatchStatus @default(active)
+  fefoRank          Int?        @map("fefo_rank")
+  qrBatchCode       String?     @unique @map("qr_batch_code") @db.VarChar(150)
+  notes             String?     @db.Text
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  item        Item         @relation(fields: [itemId], references: [itemId])
+  grn         GrnEntry     @relation(fields: [grnId], references: [grnId])
+  supplier    Supplier?    @relation(fields: [supplierId], references: [supplierId])
+  stockIssues StockIssue[]
+  alerts      Alert[]
+  disposals   DisposalLog[]
+
+  @@map("item_batches")
+}
+
+model GrnEntry {
+  grnId            Int           @id @default(autoincrement()) @map("grn_id")
+  grnNumber        String        @unique @map("grn_number") @db.VarChar(30)
+  grnDate          DateTime      @default(now()) @map("grn_date") @db.Date
+  itemId           Int           @map("item_id")
+  batchId          Int           @map("batch_id")
+  supplierId       Int?          @map("supplier_id")
+  quantityReceived Decimal       @map("quantity_received") @db.Decimal(10, 3)
+  unit             String        @db.VarChar(20)
+  batchNumber      String        @map("batch_number") @db.VarChar(100)
+  mfgDate          DateTime?     @map("mfg_date") @db.Date
+  expiryDate       DateTime?     @map("expiry_date") @db.Date
+  invoiceNumber    String        @map("invoice_number") @db.VarChar(100)
+  invoiceDate      DateTime?     @map("invoice_date") @db.Date
+  pricePerUnit     Decimal?      @map("price_per_unit") @db.Decimal(10, 2)
+  totalValue       Decimal?      @map("total_value") @db.Decimal(12, 2)
+  storeLocation    String?       @map("store_location") @db.VarChar(200)
+  receivedBy       Int           @map("received_by")
+  verifiedBy       Int?          @map("verified_by")
+  qualityStatus    QualityStatus @default(accepted) @map("quality_status")
+  notes            String?       @db.Text
+  stockBefore      Decimal       @map("stock_before") @db.Decimal(10, 3)
+  stockAfter       Decimal       @map("stock_after") @db.Decimal(10, 3)
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  item       Item       @relation(fields: [itemId], references: [itemId])
+  supplier   Supplier?  @relation(fields: [supplierId], references: [supplierId])
+  receiver   User       @relation("ReceivedBy", fields: [receivedBy], references: [userId])
+  verifier   User?      @relation("VerifiedBy", fields: [verifiedBy], references: [userId])
+  itemBatch  ItemBatch[]
+
+  @@map("grn_entries")
+}
+
+model StockIssue {
+  issueId           Int          @id @default(autoincrement()) @map("issue_id")
+  issueNumber       String       @unique @map("issue_number") @db.VarChar(30)
+  issueDate         DateTime     @default(now()) @map("issue_date") @db.Date
+  itemId            Int          @map("item_id")
+  batchId           Int          @map("batch_id")
+  deptId            Int          @map("dept_id")
+  quantityIssued    Decimal      @map("quantity_issued") @db.Decimal(10, 3)
+  unit              String       @db.VarChar(20)
+  specificLocation  String?      @map("specific_location") @db.VarChar(200)
+  purpose           IssuePurpose
+  authorisedBy      Int          @map("authorised_by")
+  issuedBy          Int          @map("issued_by")
+  patientId         String?      @map("patient_id") @db.VarChar(50)
+  prescriptionRef   String?      @map("prescription_ref") @db.VarChar(100)
+  stockBefore       Decimal      @map("stock_before") @db.Decimal(10, 3)
+  stockAfter        Decimal      @map("stock_after") @db.Decimal(10, 3)
+  batchQtyBefore    Decimal      @map("batch_qty_before") @db.Decimal(10, 3)
+  batchQtyAfter     Decimal      @map("batch_qty_after") @db.Decimal(10, 3)
+  triggeredLowStock Boolean      @default(false) @map("triggered_low_stock")
+  notes             String?      @db.Text
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  item        Item       @relation(fields: [itemId], references: [itemId])
+  batch       ItemBatch  @relation(fields: [batchId], references: [batchId])
+  department  Department @relation(fields: [deptId], references: [deptId])
+  authoriser  User       @relation("AuthorisedBy", fields: [authorisedBy], references: [userId])
+  issuer      User       @relation("IssuedBy", fields: [issuedBy], references: [userId])
+
+  @@map("stock_issues")
+}
+
+model AmcContract {
+  amcId             Int             @id @default(autoincrement()) @map("amc_id")
+  amcNumber         String          @unique @map("amc_number") @db.VarChar(50)
+  itemId            Int             @map("item_id")
+  supplierId        Int             @map("supplier_id")
+  contractStart     DateTime        @map("contract_start") @db.Date
+  contractEnd       DateTime        @map("contract_end") @db.Date
+  amcValue          Decimal?        @map("amc_value") @db.Decimal(12, 2)
+  coverageType      AmcCoverageType @default(comprehensive) @map("coverage_type")
+  serviceFrequency  String?         @map("service_frequency") @db.VarChar(100)
+  contactPerson     String?         @map("contact_person") @db.VarChar(150)
+  contactPhone      String?         @map("contact_phone") @db.VarChar(15)
+  lastServiceDate   DateTime?       @map("last_service_date") @db.Date
+  nextServiceDate   DateTime?       @map("next_service_date") @db.Date
+  status            AmcStatus       @default(active)
+  alert90dSent      Boolean         @default(false) @map("alert_90d_sent")
+  alert60dSent      Boolean         @default(false) @map("alert_60d_sent")
+  alert30dSent      Boolean         @default(false) @map("alert_30d_sent")
+  notes             String?         @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at")
+  createdBy         Int             @map("created_by")
+
+  // Relations
+  item     Item     @relation(fields: [itemId], references: [itemId])
+  supplier Supplier @relation(fields: [supplierId], references: [supplierId])
+  creator  User     @relation(fields: [createdBy], references: [userId])
+  alerts   Alert[]
+
+  @@map("amc_contracts")
+}
+
+model Alert {
+  alertId         Int           @id @default(autoincrement()) @map("alert_id")
+  alertType       AlertType     @map("alert_type")
+  itemId          Int           @map("item_id")
+  batchId         Int?          @map("batch_id")
+  amcId           Int?          @map("amc_id")
+  severity        AlertSeverity @default(medium)
+  alertTitle      String        @map("alert_title") @db.VarChar(300)
+  alertMessage    String        @map("alert_message") @db.Text
+  daysRemaining   Int?          @map("days_remaining")
+  thresholdValue  Decimal?      @map("threshold_value") @db.Decimal(10, 3)
+  status          AlertStatus   @default(active)
+  acknowledgedBy  Int?          @map("acknowledged_by")
+  acknowledgedAt  DateTime?     @map("acknowledged_at")
+  resolvedAt      DateTime?     @map("resolved_at")
+  snoozedUntil    DateTime?     @map("snoozed_until")
+  triggeredAt     DateTime      @default(now()) @map("triggered_at")
+  isVisible       Boolean       @default(true) @map("is_visible")
+
+  // Relations
+  item          Item         @relation(fields: [itemId], references: [itemId])
+  batch         ItemBatch?   @relation(fields: [batchId], references: [batchId])
+  amc           AmcContract? @relation(fields: [amcId], references: [amcId])
+  acknowledger  User?        @relation(fields: [acknowledgedBy], references: [userId])
+
+  @@map("alerts")
+}
+
+model AuditLog {
+  logId      BigInt      @id @default(autoincrement()) @map("log_id")
+  tableName  String      @map("table_name") @db.VarChar(50)
+  recordId   Int         @map("record_id")
+  action     AuditAction
+  changedBy  Int         @map("changed_by")
+  changedAt  DateTime    @default(now()) @map("changed_at")
+  oldValues  Json?       @map("old_values")
+  newValues  Json?       @map("new_values")
+  ipAddress  String?     @map("ip_address") @db.VarChar(45)
+  sessionId  String?     @map("session_id") @db.VarChar(100)
+  notes      String?     @db.VarChar(500)
+
+  // Relations
+  user User @relation(fields: [changedBy], references: [userId])
+
+  @@map("audit_log")
+}
+
+model DisposalLog {
+  disposalId       Int            @id @default(autoincrement()) @map("disposal_id")
+  disposalNumber   String         @unique @map("disposal_number") @db.VarChar(30)
+  disposalDate     DateTime       @default(now()) @map("disposal_date") @db.Date
+  itemId           Int            @map("item_id")
+  batchId          Int            @map("batch_id")
+  quantityDisposed Decimal        @map("quantity_disposed") @db.Decimal(10, 3)
+  unit             String         @db.VarChar(20)
+  disposalReason   DisposalReason @default(expired) @map("disposal_reason")
+  valueWrittenOff  Decimal?       @map("value_written_off") @db.Decimal(12, 2)
+  disposalMethod   DisposalMethod @default(incineration) @map("disposal_method")
+  ayushGuidelineRef String?       @map("ayush_guideline_ref") @db.VarChar(200)
+  disposedBy       Int            @map("disposed_by")
+  witnessedBy      String?        @map("witnessed_by") @db.VarChar(200)
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  item    Item      @relation(fields: [itemId], references: [itemId])
+  batch   ItemBatch @relation(fields: [batchId], references: [batchId])
+  disposer User     @relation(fields: [disposedBy], references: [userId])
+
+  @@map("disposal_log")
+}
+
+model ReportTemplate {
+  templateId        Int                @id @default(autoincrement()) @map("template_id")
+  templateName      String             @map("template_name") @db.VarChar(200)
+  reportType        ReportType         @map("report_type")
+  filtersJson       Json               @default("{}") @map("filters_json")
+  columnsJson       Json               @default("[]") @map("columns_json")
+  sortBy            String?            @map("sort_by") @db.VarChar(50)
+  sortDirection     SortDirection?     @default(ASC) @map("sort_direction")
+  outputFormat      OutputFormat       @default(xlsx) @map("output_format")
+  isScheduled       Boolean            @default(false) @map("is_scheduled")
+  scheduleFrequency ScheduleFrequency? @map("schedule_frequency")
+  scheduleDay       Int?               @map("schedule_day")
+  emailRecipients   String?            @map("email_recipients") @db.Text
+  createdBy         Int                @map("created_by")
+  isSystem          Boolean            @default(false) @map("is_system")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  creator User @relation(fields: [createdBy], references: [userId])
+
+  @@map("report_templates")
+}
