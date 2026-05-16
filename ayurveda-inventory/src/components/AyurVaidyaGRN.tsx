@@ -67,6 +67,17 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
   const [successGRNId, setSuccessGRNId] = useState("");
   const [grnHistory, setGrnHistory] = useState<GRNRecord[]>([]);
   const [remoteResults, setRemoteResults] = useState<Item[]>([]);
+  const [serialNumbers, setSerialNumbers] = useState("");
+  const [amcRequired, setAmcRequired] = useState(false);
+  const [amcNumber, setAmcNumber] = useState("");
+  const [amcStartDate, setAmcStartDate] = useState("");
+  const [amcEndDate, setAmcEndDate] = useState("");
+  const [amcSupplierName, setAmcSupplierName] = useState("");
+  const [amcValue, setAmcValue] = useState("");
+  const [amcCoverageType, setAmcCoverageType] = useState("comprehensive");
+  const [amcServiceFrequency, setAmcServiceFrequency] = useState("");
+  const [amcContactPerson, setAmcContactPerson] = useState("");
+  const [amcContactPhone, setAmcContactPhone] = useState("");
 
   const [form, setForm] = useState<FormState>({
     batchNo: "", qty: "", unit: "ml", mfgDate: "", expiryDate: "",
@@ -169,6 +180,17 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
       storeLocation: form.storeLocation || null,
       receivedBy: form.receivedBy || null,
       notes: form.notes || null,
+      serialNumbers,
+      amcRequired,
+      amcNumber,
+      amcStartDate,
+      amcEndDate,
+      amcSupplierName,
+      amcValue,
+      amcCoverageType,
+      amcServiceFrequency,
+      amcContactPerson,
+      amcContactPhone,
     }
 
     try {
@@ -354,6 +376,17 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
       pricePerUnit: "", storeLocation: "Main pharmacy store",
       receivedBy: "Ramesh Kumar", notes: "",
     });
+    setSerialNumbers("");
+    setAmcRequired(false);
+    setAmcNumber("");
+    setAmcStartDate("");
+    setAmcEndDate("");
+    setAmcSupplierName("");
+    setAmcValue("");
+    setAmcCoverageType("comprehensive");
+    setAmcServiceFrequency("");
+    setAmcContactPerson("");
+    setAmcContactPhone("");
     setCurrentStep(1);
     setActiveTab("new");
   };
@@ -724,7 +757,126 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                       </div>
                     </div>
                   </div>
+                  {/* CAPEX asset & AMC card */}
+                  {selectedItem.category === "CAPEX" && (
+                    <div className="form-card anim-in" style={{ animationDelay: "0.16s" }}>
+                      <div className="fc-head">
+                        <div className="fc-title">CAPEX asset &amp; AMC details</div>
+                      </div>
+                      <div className="fc-body">
+                        <div className="field" style={{ marginBottom: 14 }}>
+                          <label>Serial numbers</label>
+                          <textarea
+                            value={serialNumbers}
+                            onChange={(event) => setSerialNumbers(event.target.value)}
+                            placeholder="One serial number per line or comma-separated"
+                            rows={3}
+                            style={{ resize: "vertical" }}
+                          />
+                          <div className="field-hint">
+                            These serials belong to this procurement / GRN batch.
+                          </div>
+                        </div>
 
+                        <label className="toggle-row">
+                          <input
+                            type="checkbox"
+                            checked={amcRequired}
+                            onChange={(event) => setAmcRequired(event.target.checked)}
+                          />
+                          <span>AMC required for this procurement</span>
+                        </label>
+
+                        {amcRequired && (
+                          <div className="field-grid g3" style={{ marginTop: 14 }}>
+                            <div className="field">
+                              <label>AMC number</label>
+                              <input
+                                value={amcNumber}
+                                onChange={(event) => setAmcNumber(event.target.value)}
+                                placeholder="Auto if blank"
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>AMC supplier</label>
+                              <input
+                                value={amcSupplierName}
+                                onChange={(event) => setAmcSupplierName(event.target.value)}
+                                placeholder="AMC vendor name"
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>Contract start</label>
+                              <input
+                                type="date"
+                                value={amcStartDate}
+                                onChange={(event) => setAmcStartDate(event.target.value)}
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>Contract end <span className="req">*</span></label>
+                              <input
+                                type="date"
+                                value={amcEndDate}
+                                onChange={(event) => setAmcEndDate(event.target.value)}
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>AMC value</label>
+                              <input
+                                type="number"
+                                value={amcValue}
+                                onChange={(event) => setAmcValue(event.target.value)}
+                                placeholder="0.00"
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>Coverage type</label>
+                              <select
+                                value={amcCoverageType}
+                                onChange={(event) => setAmcCoverageType(event.target.value)}
+                              >
+                                <option value="comprehensive">Comprehensive</option>
+                                <option value="non_comprehensive">Non comprehensive</option>
+                                <option value="parts_only">Parts only</option>
+                                <option value="labour_only">Labour only</option>
+                              </select>
+                            </div>
+
+                            <div className="field">
+                              <label>Service frequency</label>
+                              <input
+                                value={amcServiceFrequency}
+                                onChange={(event) => setAmcServiceFrequency(event.target.value)}
+                                placeholder="Quarterly / Half-yearly"
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>Contact person</label>
+                              <input
+                                value={amcContactPerson}
+                                onChange={(event) => setAmcContactPerson(event.target.value)}
+                              />
+                            </div>
+
+                            <div className="field">
+                              <label>Contact phone</label>
+                              <input
+                                value={amcContactPhone}
+                                onChange={(event) => setAmcContactPhone(event.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="action-row">
                     <button className="btn-back" onClick={() => goStep(1)}>← Back</button>
                     <button className="btn-cancel" onClick={resetAll}>Cancel</button>
@@ -1045,6 +1197,21 @@ const CSS = `
 .field-hint{font-size:10.5px;color:var(--text-mute);margin-top:3px}
 .field-computed{font-size:10.5px;color:var(--green-mid);margin-top:3px;font-weight:500}
 .field-warn{font-size:10.5px;color:var(--amber);margin-top:3px}
+
+.toggle-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  color:var(--text-mid);
+  cursor:pointer;
+}
+
+.toggle-row input{
+  width:14px;
+  height:14px;
+  accent-color:var(--green);
+}
 
 /* Batch warning box */
 .batch-warn-box{background:var(--amber-light);border:1px solid rgba(146,64,14,0.25);border-radius:var(--r-md);padding:10px 12px;font-size:12px;color:var(--amber);display:none;margin-top:6px}

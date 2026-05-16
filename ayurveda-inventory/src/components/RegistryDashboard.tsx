@@ -1,7 +1,7 @@
 "use client";
 
-import react, { useState, useEffect, useRef } from "react";
-import { Item, FilterState, Batch } from "./registry/utils";
+import React, { useState, useEffect, useRef } from "react";
+import { Item, FilterState, Batch, itemStatus } from "./registry/utils";
 import FilterBar from "./registry/FilterBar";
 import ResultStrip from "./registry/ResultStrip";
 import RegistryTable from "./registry/RegistryTable";
@@ -21,7 +21,7 @@ export default function AyurVaidyaRegistry() {
     search: "",
     highlight: null,
     bannerMsg: null,
-    sortCol: "name",
+    sortCol: "status",
   });
   const [detailItem, setDetailItem] = useState<Item | null | "new">(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -47,7 +47,21 @@ export default function AyurVaidyaRegistry() {
       .then((r) => r.ok ? r.json() : Promise.reject(r))
       .then((data) => {
         if (!mounted || !Array.isArray(data)) return
-        type RawBatch = { batch?: string | null; stock?: number | string | null; expiry?: string | null; supplier?: string | null; price?: number | string | null; location?: string | null };
+        type RawBatch = { 
+          batch?: string | null;
+          stock?: number | string | null;
+          expiry?: string | null;
+          supplier?: string | null;
+          price?: number | string | null;
+          location?: string | null;
+          grn?: string | null;
+          grnDate?: string | null;
+          serials?: string[] | null;
+          amc?: string | null;
+          amcExpiry?: string | null;
+          amcStatus?: string | null;
+          amcSupplier?: string | null;
+         };
         type RawRow = {
           id?: string | number;
           name?: string;
@@ -72,64 +86,50 @@ export default function AyurVaidyaRegistry() {
 
         const mapped: Item[] = data.map((d: RawRow) => {
           const rawBatches: RawBatch[] = Array.isArray(d.batches) && d.batches.length ? d.batches : (d.batch ? [{ batch: d.batch, stock: d.stock ?? 0, expiry: d.expiry ?? null, supplier: d.supplier ?? null, price: d.price ?? null }] : []);
-          const batches = rawBatches.map(b => ({ batch: String(b.batch ?? ''), stock: Number(b.stock ?? 0), expiry: b.expiry ?? null, supplier: b.supplier ?? undefined, price: b.price ? Number(b.price) : undefined, location: b.location ?? undefined }));
+          const batches: Batch[] = rawBatches.map((b) => ({
+            batch: String(b.batch ?? ""),
+            stock: Number(b.stock ?? 0),
+            expiry: b.expiry ?? null,
+            supplier: b.supplier ?? null,
+            price: b.price ? Number(b.price) : null,
+            location: b.location ?? null,
+            grn: b.grn ?? null,
+            grnDate: b.grnDate ?? null,
+            serials: Array.isArray(b.serials) ? b.serials : [],
+            amc: b.amc ?? null,
+            amcExpiry: b.amcExpiry ?? null,
+            amcStatus: b.amcStatus ?? null,
+            amcSupplier: b.amcSupplier ?? null,
+          }));
           const totalStock = batches.reduce((s, x) => s + (x.stock || 0), 0);
           const earliestExpiry = batches.filter(b => b.expiry).map(b => new Date(b.expiry as string).getTime()).sort((a,b)=>a-b)[0];
           const expiryStr = earliestExpiry ? new Date(earliestExpiry).toISOString() : (d.expiry ?? null);
 
-          const computeStatus = () => {
-            if (d.category === 'CAPEX') {
-              if (!d.amcExpiry) return 'healthy'
-              const days = Math.round((new Date(d.amcExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-              if (days < 0) return 'expired'
-              if (days < 60) return 'amc_due'
-              return 'healthy'
-            }
-            // OPEX: consider batch expiries first
-            if (batches.length) {
-              for (const b of batches) {
-                if (b.expiry) {
-                  const days = Math.round((new Date(b.expiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                  if (days < 0) return 'expired'
-                }
-              }
-              for (const b of batches) {
-                if (b.expiry) {
-                  const days = Math.round((new Date(b.expiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                  if (days < 30) return 'expiring'
-                }
-              }
-            } else if (d.expiry) {
-              const days = Math.round((new Date(d.expiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-              if (days < 0) return 'expired'
-              if (days < 30) return 'expiring'
-            }
-            if (d.min && totalStock < Number(d.min)) return 'low_stock'
-            return 'healthy'
-          }
-
-          return {
-            id: String(d.id ?? ''),
-            name: d.name ?? '',
-            sub: d.sub ?? '',
-            category: (d.category === 'CAPEX' ? 'CAPEX' : 'OPEX') as Item['category'],
-            subcat: (d.subcat as Item['subcat']) || null,
+          const item: Item = {
+            id: String(d.id ?? ""),
+            name: d.name ?? "",
+            sub: d.sub ?? "",
+            category: (d.category === "CAPEX" ? "CAPEX" : "OPEX") as Item["category"],
+            subcat: (d.subcat as Item["subcat"]) || "medicines",
             stock: totalStock || Number(d.stock ?? 0),
             min: Number(d.min ?? 0),
             max: Number(d.max ?? 0),
-            unit: d.unit ?? '',
+            unit: d.unit ?? "",
             expiry: expiryStr ?? null,
-            dept: d.dept ?? '',
-            status: computeStatus() as Item['status'],
+            dept: d.dept ?? "",
+            status: "healthy",
             batch: batches[0]?.batch ?? d.batch ?? undefined,
-            batches: batches as Batch[],
+            batches,
             supplier: d.supplier ?? undefined,
             price: Number(d.price ?? (batches[0]?.price ?? 0)),
             amc: d.amc ?? null,
             amcExpiry: d.amcExpiry ?? null,
             serial: d.serial ?? undefined,
             purchase: d.purchase ?? undefined,
-          }
+          };
+
+          item.status = itemStatus(item) as Item["status"];
+          return item;
         })
         setItems(mapped)
         setLoading(false)
@@ -149,14 +149,30 @@ export default function AyurVaidyaRegistry() {
       if (filters.category !== "all" && item.category !== filters.category) return false;
       if (filters.subcat && item.subcat !== filters.subcat) return false;
       if (filters.status) {
-        if (filters.status === "expiring" && !["expiring", "critical"].includes(item.status)) return false;
-        if (filters.status === "expired"   && item.status !== "expired") return false;
-        if (filters.status === "low_stock" && item.status !== "low_stock") return false;
-        if (filters.status === "amc_due"   && item.status !== "amc_due") return false;
-        if (filters.status === "healthy"   && item.status !== "healthy") return false;
+        if (filters.status === "expiring" && item.status !== "expiring") return false;
+      if (filters.status === "expired" && !["expired", "amc_expired"].includes(item.status)) return false;
+      if (filters.status === "low_stock" && item.status !== "low_stock") return false;
+      if (filters.status === "amc_due" && !["amc_due", "amc_expired"].includes(item.status)) return false;
+      if (filters.status === "healthy" && !["healthy", "no_expiry", "no_amc"].includes(item.status)) return false;
       }
       if (filters.search) {
-        const hay = (item.name + item.sub + item.id + item.dept + (item.batch || "")).toLowerCase();
+        const hay = [
+          item.name,
+          item.sub,
+          item.id,
+          item.dept,
+          item.batch,
+          ...(item.batches ?? []).flatMap((batch) => [
+            batch.batch,
+            batch.grn,
+            batch.supplier,
+            batch.amc,
+            batch.amcSupplier,
+            ...(batch.serials ?? []),
+          ]),
+        ]
+          .join(" ")
+          .toLowerCase();
         if (!hay.includes(filters.search.toLowerCase())) return false;
       }
       return true;
@@ -165,7 +181,15 @@ export default function AyurVaidyaRegistry() {
     // Sort according to selected column. When sorting by `status`, group by urgency
     // (expired/amc_due/expiring/low_stock/healthy). For other sorts, apply the
     // selected comparator and keep name as a tie-breaker.
-    const urgency: Record<string, number> = { expired: 0, amc_due: 1, expiring: 2, low_stock: 3, healthy: 4 };
+    const urgency: Record<string, number> = {expired: 0,
+      amc_expired: 0,
+      amc_due: 1,
+      expiring: 2,
+      low_stock: 3,
+      healthy: 4,
+      no_expiry: 5,
+      no_amc: 5,
+    };
     rows.sort((a, b) => {
       if (filters.sortCol === "status") {
         const ua = urgency[a.status] ?? 4;
@@ -175,7 +199,10 @@ export default function AyurVaidyaRegistry() {
       }
 
       let va: string | number = a.name, vb: string | number = b.name;
-      if (filters.sortCol === "expiry") { va = a.expiry || a.amcExpiry || "9999"; vb = b.expiry || b.amcExpiry || "9999"; }
+      if (filters.sortCol === "expiry") {
+        va = a.expiry || a.amcExpiry || a.batches?.find((batch) => batch.amcExpiry)?.amcExpiry || "9999";
+        vb = b.expiry || b.amcExpiry || b.batches?.find((batch) => batch.amcExpiry)?.amcExpiry || "9999";
+      }
       else if (filters.sortCol === "stock")  { va = a.stock / Math.max(1, a.min || 1); vb = b.stock / Math.max(1, b.min || 1); }
       else if (filters.sortCol === "dept")   { va = a.dept; vb = b.dept; }
 
@@ -230,7 +257,7 @@ export default function AyurVaidyaRegistry() {
       search: "",
       highlight: params.highlight || null,
       bannerMsg: params.bannerMsg || null,
-      sortCol: "name",
+      sortCol: "status",
     });
   };
 
@@ -250,7 +277,7 @@ export default function AyurVaidyaRegistry() {
   }, []);
 
   const clearAllFilters = () => {
-    setFilters({ category: "all", subcat: null, status: null, search: "", highlight: null, bannerMsg: null, sortCol: "name" });
+    setFilters({ category: "all", subcat: null, status: null, search: "", highlight: null, bannerMsg: null, sortCol: "status" });
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,6 +370,7 @@ export default function AyurVaidyaRegistry() {
           setSubcat={setSubcat}
           setStatus={setStatus}
           clearAllFilters={clearAllFilters}
+          totalCount={items.length}
           onImport={() => importInputRef.current?.click()}
           onExport={() => {
             try {

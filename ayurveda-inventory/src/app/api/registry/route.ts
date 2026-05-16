@@ -43,12 +43,36 @@ export async function GET() {
     let batchesRaw: Array<Record<string, unknown>> = [];
     if (itemIds.length) {
       const batchSql = `
-        SELECT ib.item_id, ib.batch_number AS batch, ib.quantity_available AS stock, to_char(ib.expiry_date, 'YYYY-MM-DD') AS expiry, sup.supplier_name AS supplier, ib.purchase_price AS price, ib.storage_location AS location
+        SELECT
+          ib.item_id,
+          ib.batch_id,
+          ib.batch_number AS batch,
+          ib.quantity_available AS stock,
+          to_char(ib.expiry_date, 'YYYY-MM-DD') AS expiry,
+          sup.supplier_name AS supplier,
+          ib.purchase_price AS price,
+          ib.storage_location AS location,
+          ib.serial_numbers AS serial_numbers,
+          g.grn_number AS grn,
+          to_char(g.grn_date, 'YYYY-MM-DD') AS grn_date,
+          ac.amc_number AS amc,
+          to_char(ac.contract_end, 'YYYY-MM-DD') AS amc_expiry,
+          ac.status AS amc_status,
+          amc_sup.supplier_name AS amc_supplier
         FROM item_batches ib
+        LEFT JOIN grn_entries g ON g.grn_id = ib.grn_id
         LEFT JOIN suppliers sup ON sup.supplier_id = ib.supplier_id
+        LEFT JOIN LATERAL (
+          SELECT *
+          FROM amc_contracts ac
+          WHERE ac.batch_id = ib.batch_id
+          ORDER BY ac.contract_end DESC
+          LIMIT 1
+        ) ac ON true
+        LEFT JOIN suppliers amc_sup ON amc_sup.supplier_id = ac.supplier_id
         WHERE ib.item_id IN (${itemIds.join(',')})
-        ORDER BY ib.expiry_date ASC
-      `;
+        ORDER BY ib.expiry_date ASC NULLS LAST, ib.created_at DESC
+`;
       batchesRaw = (await prisma.$queryRawUnsafe(batchSql)) as unknown as Array<Record<string, unknown>>;
     }
 
@@ -56,7 +80,25 @@ export async function GET() {
     for (const b of batchesRaw) {
       const id = Number(b['item_id']);
       if (!batchesByItem[id]) batchesByItem[id] = [];
-      batchesByItem[id].push({ batch: b['batch'] as string, stock: Number(b['stock'] ?? 0), expiry: (b['expiry'] as string) || null, supplier: (b['supplier'] as string) || null, price: b['price'] ?? null, location: b['location'] ?? null });
+      const serials = String(b["serial_numbers"] ?? "")
+        .split(/[\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+      batchesByItem[id].push({
+        batch: b["batch"] as string,
+        stock: Number(b["stock"] ?? 0),
+        expiry: (b["expiry"] as string) || null,
+        supplier: (b["supplier"] as string) || null,
+        price: b["price"] ?? null,
+        location: b["location"] ?? null,
+        grn: (b["grn"] as string) || null,
+        grnDate: (b["grn_date"] as string) || null,
+        serials,
+        amc: (b["amc"] as string) || null,
+        amcExpiry: (b["amc_expiry"] as string) || null,
+        amcStatus: (b["amc_status"] as string) || null,
+        amcSupplier: (b["amc_supplier"] as string) || null,
+      });
     }
 
     const items = itemsRaw.map(it => {
