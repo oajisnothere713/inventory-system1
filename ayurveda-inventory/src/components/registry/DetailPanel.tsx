@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Item, stockPct, expiryLabel, stockBarColor } from "./utils";
+import { Batch, Item, batchStatus, stockPct, expiryLabel, stockBarColor } from "./utils";
 import StatusPill from "./StatusPill";
 
 export default function DetailPanel({ item, onClose }: { item: Item | null | "new"; onClose: () => void }) {
@@ -59,24 +59,64 @@ export default function DetailPanel({ item, onClose }: { item: Item | null | "ne
               </span>
             </div>
             <Field label="Batch number" value={item.batch || "—"} mono />
-            {(item as any).batches && (item as any).batches.length ? (
+            {item.batches && item.batches.length ? (
               <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 6 }}>Batches</div>
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {(item as any).batches.map((b: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: 8, background: '#fafafa', borderRadius: 6 }}>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                        <div style={{ fontFamily: 'var(--mono)', minWidth: 96 }}>{b.batch}</div>
-                        <div>{b.stock} {item.unit}</div>
-                        <div>{b.expiry ? new Date(b.expiry).toLocaleDateString('en-IN') : '—'}</div>
-                        <div style={{ color: 'var(--text-dim)' }}>{b.supplier || '—'}</div>
+                <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 6 }}>Batches</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {item.batches.map((batch: Batch, index: number) => {
+                    const status = batchStatus(batch, false);
+                    const disabled = status === "expired";
+
+                    return (
+                      <div
+                        key={`${batch.batch}-${index}`}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          padding: 8,
+                          background: "#fafafa",
+                          borderRadius: 6,
+                        }}
+                      >
+                        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                          <div style={{ fontFamily: "var(--mono)", minWidth: 96 }}>{batch.batch}</div>
+                          <div>{batch.stock} {item.unit}</div>
+                          <div>{batch.expiry ? new Date(batch.expiry).toLocaleDateString("en-IN") : "—"}</div>
+                          <div style={{ color: "var(--text-dim)" }}>{batch.supplier || "—"}</div>
+                          <div style={{ color: "var(--text-dim)" }}>{status}</div>
+                        </div>
+
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            className="dp-btn"
+                            disabled={disabled}
+                            onClick={() => {
+                              if (disabled) return;
+                              try {
+                                sessionStorage.setItem("openItemForISS", String(item.id));
+                                sessionStorage.setItem("openItemForISSBatch", String(batch.batch));
+                                window.dispatchEvent(new CustomEvent("open-issue", { detail: item.id }));
+                              } catch {}
+                            }}
+                          >
+                            Issue
+                          </button>
+
+                          <button
+                            className="dp-btn"
+                            onClick={() => {
+                              try {
+                                window.dispatchEvent(new CustomEvent("open-grn", { detail: item.id }));
+                              } catch {}
+                            }}
+                          >
+                            GRN
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <div className="dp-btn" onClick={() => { try { sessionStorage.setItem('openItemForISS', String(item.id)); sessionStorage.setItem('openItemForISSBatch', String(b.batch)); window.dispatchEvent(new CustomEvent('open-issue', { detail: item.id })); } catch (e) {} }}>Issue</div>
-                        <div className="dp-btn" onClick={() => { alert('Receive GRN into batch: ' + b.batch); }}>GRN</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
@@ -87,13 +127,33 @@ export default function DetailPanel({ item, onClose }: { item: Item | null | "ne
           </div>
         ) : (
           <div className="dp-section">
-            <div className="dp-section-title">Asset & AMC details</div>
+            <div className="dp-section-title">Procurement & AMC details</div>
             <Field label="Quantity" value={`${item.stock} ${item.unit}`} />
-            <Field label="Serial number" value={item.serial || "—"} mono />
-            <Field label="Purchase date" value={item.purchase ? new Date(item.purchase).toLocaleDateString("en-IN") : "—"} />
-            <Field label="Purchase price" value={`₹${item.price.toLocaleString()}`} />
-            <Field label="AMC vendor" value={item.amc || "No AMC required"} />
-            <Field label="AMC expiry" value={item.amcExpiry ? new Date(item.amcExpiry).toLocaleDateString("en-IN") : "—"} />
+
+            {item.batches && item.batches.length ? (
+              <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                {item.batches.map((batch: Batch, index: number) => (
+                  <div key={`${batch.batch}-${index}`} style={{ padding: 8, background: "#fafafa", borderRadius: 6 }}>
+                    <Field label="GRN" value={batch.grn || batch.batch || "—"} mono />
+                    <Field label="Received" value={batch.grnDate ? new Date(batch.grnDate).toLocaleDateString("en-IN") : "—"} />
+                    <Field label="Qty" value={`${batch.stock} ${item.unit}`} />
+                    <Field label="Supplier" value={batch.supplier || "—"} />
+                    <Field label="AMC no." value={batch.amc || "No AMC"} mono />
+                    <Field label="AMC vendor" value={batch.amcSupplier || "—"} />
+                    <Field label="AMC expiry" value={batch.amcExpiry ? new Date(batch.amcExpiry).toLocaleDateString("en-IN") : "—"} />
+                    <Field label="Serials" value={(batch.serials ?? []).join(", ") || "—"} mono />
+                  </div>
+                ))} 
+              </div>
+            ) : (
+              <>
+                <Field label="Serial number" value={item.serial || "—"} mono />
+                <Field label="Purchase date" value={item.purchase ? new Date(item.purchase).toLocaleDateString("en-IN") : "—"} />
+                <Field label="Purchase price" value={`₹${item.price.toLocaleString()}`} />
+                <Field label="AMC vendor" value={item.amc || "No AMC required"} />
+                <Field label="AMC expiry" value={item.amcExpiry ? new Date(item.amcExpiry).toLocaleDateString("en-IN") : "—"} />
+              </>
+            )}
           </div>
         )}
       </>

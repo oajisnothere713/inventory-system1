@@ -332,6 +332,8 @@ model ItemBatch {
   stockIssues StockIssue[]
   alerts      Alert[]
   disposals   DisposalLog[]
+  amcContracts AmcContract[]
+
 
   @@map("item_batches")
 }
@@ -367,6 +369,8 @@ model GrnEntry {
   receiver   User       @relation("ReceivedBy", fields: [receivedBy], references: [userId])
   verifier   User?      @relation("VerifiedBy", fields: [verifiedBy], references: [userId])
   itemBatch  ItemBatch[]
+  amcContracts AmcContract[]
+
 
   @@map("grn_entries")
 }
@@ -408,6 +412,8 @@ model AmcContract {
   amcId             Int             @id @default(autoincrement()) @map("amc_id")
   amcNumber         String          @unique @map("amc_number") @db.VarChar(50)
   itemId            Int             @map("item_id")
+  batchId           Int?            @map("batch_id")
+  grnId             Int?            @map("grn_id")
   supplierId        Int             @map("supplier_id")
   contractStart     DateTime        @map("contract_start") @db.Date
   contractEnd       DateTime        @map("contract_end") @db.Date
@@ -428,10 +434,15 @@ model AmcContract {
 
   // Relations
   item     Item     @relation(fields: [itemId], references: [itemId])
+  batch ItemBatch? @relation(fields: [batchId], references: [batchId])
+  grn   GrnEntry?  @relation(fields: [grnId], references: [grnId])
   supplier Supplier @relation(fields: [supplierId], references: [supplierId])
   creator  User     @relation(fields: [createdBy], references: [userId])
   alerts   Alert[]
+  
 
+  @@index([batchId])
+  @@index([grnId])
   @@map("amc_contracts")
 }
 

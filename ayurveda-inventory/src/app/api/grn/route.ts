@@ -62,6 +62,17 @@ export async function POST(req: Request) {
       storeLocation,
       receivedBy,
       notes,
+      serialNumbers,
+      amcRequired,
+      amcNumber,
+      amcStartDate,
+      amcEndDate,
+      amcSupplierName,
+      amcValue,
+      amcCoverageType,
+      amcServiceFrequency,
+      amcContactPerson,
+      amcContactPhone,
     } = body
 
     if (!itemCode) return NextResponse.json({ error: 'itemCode required' }, { status: 400 })
@@ -129,18 +140,76 @@ export async function POST(req: Request) {
           `) as any
 
           const batchInsert = (await tx.$queryRaw`
-            INSERT INTO item_batches (batch_id, item_id, batch_number, quantity_received, quantity_available, mfg_date, expiry_date, grn_id, supplier_id, purchase_price, storage_location, notes, created_at, updated_at)
-            VALUES (${batchId}, ${it.itemId}, ${batchNo}, ${receiveQty}, ${receiveQty}, ${mfgDate ? new Date(mfgDate) : null}, ${expiryDate ? new Date(expiryDate) : null}, ${grnId}, ${supId ?? null}, ${pricePerUnit ?? null}, ${storeLocation ?? ''}, ${notes ?? ''}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO item_batches (batch_id, item_id, batch_number, quantity_received, quantity_available, mfg_date, expiry_date, grn_id, supplier_id, purchase_price,storage_location, serial_numbers, notes, created_at, updated_at)
+            VALUES (${batchId}, ${it.itemId}, ${batchNo}, ${receiveQty}, ${receiveQty},${mfgDate ? new Date(mfgDate) : null}, ${expiryDate ? new Date(expiryDate) : null},${grnId}, ${supId ?? null}, ${pricePerUnit ?? null},${storeLocation ?? ''}, ${serialNumbers ?? ''}, ${notes ?? ''},CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING batch_id, item_id, batch_number, quantity_received, quantity_available, mfg_date, expiry_date, grn_id, supplier_id, purchase_price, storage_location, notes, created_at, updated_at;
           `) as any
 
           const grnRow = Array.isArray(grnInsert) ? grnInsert[0] : grnInsert
           const batchRow = Array.isArray(batchInsert) ? batchInsert[0] : batchInsert
+          let amcRow: unknown = null;
+
+          if (it.category === "CAPEX" && amcRequired && amcEndDate) {
+            let amcSupId = supId;
+
+            if (amcSupplierName && String(amcSupplierName).trim()) {
+              const existingAmcSupplier = await tx.supplier.findFirst({
+                where: { supplierName: String(amcSupplierName).trim() },
+              });
+
+              if (existingAmcSupplier) {
+                amcSupId = existingAmcSupplier.supplierId;
+              } else {
+                const amcSupplierCode =
+                  String(amcSupplierName).replace(/[^A-Z0-9]/gi, "").slice(0, 8) || "AMCSUP";
+
+                const createdAmcSupplier = await tx.supplier.create({
+                  data: {
+                    supplierCode: amcSupplierCode,
+                    supplierName: String(amcSupplierName).trim(),
+                  },
+                });
+
+                amcSupId = createdAmcSupplier.supplierId;
+              }
+            }
+
+            if (!amcSupId) {
+              throw new Error("AMC supplier required for CAPEX AMC");
+            }
+
+            const creator = recvId || 1;
+            const finalAmcNumber =
+              amcNumber && String(amcNumber).trim()
+                ? String(amcNumber).trim()
+                : `AMC-${new Date().getFullYear()}-${grnId.toString().padStart(4, "0")}`;
+
+            const amcInsert = await tx.amcContract.create({
+              data: {
+                amcNumber: finalAmcNumber,
+                itemId: it.itemId,
+                batchId,
+                grnId,
+                supplierId: amcSupId,
+                contractStart: amcStartDate ? new Date(amcStartDate) : new Date(),
+                contractEnd: new Date(amcEndDate),
+                amcValue: amcValue ? Number(amcValue) : null,
+                coverageType: amcCoverageType || "comprehensive",
+                serviceFrequency: amcServiceFrequency || null,
+                contactPerson: amcContactPerson || null,
+                contactPhone: amcContactPhone || null,
+                createdBy: creator,
+                notes: notes ?? "",
+              },
+            });
+
+            amcRow = amcInsert;
+          }
 
           // Construct a lightweight updatedItem with the newly created batch to avoid heavy includes
           const updatedItem = { ...it, itemBatches: [batchRow] }
 
-          return { grnNumber, grnId, grnRow, updatedItem }
+          return { grnNumber, grnId, grnRow, updatedItem, amc: amcRow }
         }, txOptions)
         lastErr = null
         break
@@ -157,7 +226,7 @@ export async function POST(req: Request) {
     }
     if (!result && lastErr) throw lastErr
 
-    return NextResponse.json({ ok: true, grn: result.grnNumber, grnId: result.grnId, grnEntry: result.grnRow, item: result.updatedItem })
+    return NextResponse.json({ ok: true, grn: result.grnNumber, grnId: result.grnId, grnEntry: result.grnRow, item: result.updatedItem, amc: result.amc })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
