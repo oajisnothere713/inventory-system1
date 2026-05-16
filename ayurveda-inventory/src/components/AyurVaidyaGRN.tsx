@@ -414,6 +414,9 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
     if (!form.mfgDate) errs.push('Manufacturing date is required');
     if (!form.supplierName || !form.supplierName.trim()) errs.push('Supplier name is required');
     if (!form.invoiceNo || !form.invoiceNo.trim()) errs.push('Invoice / Challan number is required');
+    if (selectedItem?.category === "CAPEX" && amcRequired && !amcEndDate) {
+      errs.push("AMC contract end date is required when AMC is enabled");
+    }
     if (errs.length) {
       alert(errs.join('\n'))
       return false
@@ -613,7 +616,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
 
               {/* ── STEP 2 ── Batch details ───────────────────────────── */}
               {activeTab === "new" && currentStep === 2 && selectedItem && (
-                <div>
+                <div className="grn-details-compact">
                   {/* Item reminder */}
                   <SelectedItemCard item={selectedItem} onChange={() => goStep(1)} style={{ marginBottom: 0, cursor: "default" }} changeLabel="← Change item" />
 
@@ -1132,10 +1135,26 @@ const CSS = `
 .content{flex:1;display:flex;overflow:visible}
 
 /* Left: form panel */
-.form-panel{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:18px}
+.form-panel{flex:1;overflow-y:auto;padding:16px 22px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .form-panel::-webkit-scrollbar{width:4px}
 .form-panel::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:2px}
-
+.form-panel > div{
+max-width:900px;
+width:100%;}
+.grn-details-compact{
+  width:min(100%,880px);
+  max-width:880px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+.grn-details-compact .selected-item,
+.grn-details-compact .form-card{
+  width:100%;
+}
+.grn-details-compact .form-card + .form-card{
+  margin-top:0;
+}
 /* Right: preview panel */
 .preview-panel{width:300px;min-width:300px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:auto;flex-shrink:0}
 .pp-head{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -1147,13 +1166,13 @@ const CSS = `
 .pp-foot{padding:14px 16px;border-top:1px solid var(--border);flex-shrink:0}
 
 /* Cards */
-.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
 .anim-in{animation:slideUp 0.28s ease both}
 @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.fc-head{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.fc-title{font-size:12.5px;font-weight:500;color:var(--text-mid);display:flex;align-items:center;gap:8px}
+.fc-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.fc-title{font-size:12px;font-weight:500;color:var(--text-mid);display:flex;align-items:center;gap:8px}
 .fc-step-dot{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.fc-body{padding:16px}
+.fc-body{padding:12px 16px}
 
 /* Scan row */
 .scan-row{display:flex;gap:10px;margin-bottom:12px;position:relative;flex-wrap:wrap}
@@ -1177,21 +1196,21 @@ const CSS = `
 .sr-cat{font-size:10.5px;color:var(--text-dim)}
 
 /* Selected item card */
-.selected-item{background:var(--green-light);border:1.5px solid rgba(26,107,60,0.3);border-radius:var(--r-lg);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0}
-.si-name{font-size:13px;font-weight:500;color:var(--green)}
-.si-sub{font-size:11px;color:var(--green-mid);margin-top:2px}
-.si-badges{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.selected-item{background:var(--green-light);border:1.5px solid rgba(26,107,60,0.3);border-radius:14px;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:0}
+.si-name{font-size:12.5px;font-weight:500;color:var(--green)}
+.si-sub{font-size:10.5px;color:var(--green-mid);margin-top:1px}
+.si-badges{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
 .si-change{font-size:11px;color:var(--green-mid);cursor:pointer;text-decoration:underline;white-space:nowrap;margin-left:12px}
 
 /* Form fields */
-.field-grid{display:grid;gap:14px}
+.field-grid{display:grid;gap:12px}
 .g2{grid-template-columns:1fr 1fr}
 .g3{grid-template-columns:1fr 1fr 1fr}
 .g1{grid-template-columns:1fr}
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:11.5px;font-weight:500;color:var(--text-mid)}
 .req{color:var(--red);margin-left:2px}
-.field input,.field select,.field textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--sans);font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s,background 0.15s}
+.field input,.field select,.field textarea{padding:7px 10px;min-height:36px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:12.5px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s,background 0.15s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);background:var(--surface)}
 .field input::placeholder,.field textarea::placeholder{color:var(--text-mute)}
 .field-hint{font-size:10.5px;color:var(--text-mute);margin-top:3px}
