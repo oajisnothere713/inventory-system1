@@ -26,6 +26,7 @@ export default function AyurVaidyaRegistry() {
   const [detailItem, setDetailItem] = useState<Item | null | "new">(null);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -140,7 +141,13 @@ export default function AyurVaidyaRegistry() {
         setLoading(false)
       })
     return () => { mounted = false }
-  }, [])
+  }, [refreshKey])
+
+  useEffect(() => {
+    const openNewItem = () => setDetailItem("new");
+    window.addEventListener("open-new-registry-item", openNewItem);
+    return () => window.removeEventListener("open-new-registry-item", openNewItem);
+  }, []);
 
   // ── Filter logic ──────────────────────────────────────────────────────────
 
@@ -445,7 +452,11 @@ export default function AyurVaidyaRegistry() {
       </div>
 
       {/* ── Detail Panel ───────────────────────────────────────── */}
-      <DetailPanel item={detailItem} onClose={() => setDetailItem(null)} />
+      <DetailPanel
+        item={detailItem}
+        onClose={() => setDetailItem(null)}
+        onItemCreated={() => setRefreshKey((key) => key + 1)}
+      />
 
       {/* ── Demo toolbar ───────────────────────────────────────── */}
       <div className="demo-bar">

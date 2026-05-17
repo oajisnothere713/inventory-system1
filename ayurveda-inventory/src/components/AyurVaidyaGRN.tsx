@@ -255,10 +255,16 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
 
   const searchResults = remoteResults;
 
+  const isCapex = selectedItem?.category === "CAPEX";
+  const detailLabel = isCapex ? "asset details" : "batch details";
   const qty = parseInt(form.qty) || 0;
   const price = parseFloat(form.pricePerUnit) || 0;
   const newStock = selectedItem ? selectedItem.currentStock + qty : 0;
   const invoiceTotal = qty > 0 && price > 0 ? qty * price : 0;
+  const serialList = serialNumbers
+    .split(/[\n,]+/)
+    .map((serial) => serial.trim())
+    .filter(Boolean);
 
   const shelfLife = (() => {
     if (!form.mfgDate || !form.expiryDate) return null;
@@ -271,7 +277,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
   })();
 
   const batchExists =
-    selectedItem && form.batchNo.trim()
+    selectedItem && !isCapex && form.batchNo.trim()
       ? selectedItem.batches.some(
           (b) => !!(b && b.batchNo) && b.batchNo.toLowerCase() === form.batchNo.toLowerCase()
         )
@@ -293,6 +299,15 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
   })();
 
   const expiryInfo = (() => {
+    if (isCapex) {
+      if (!amcRequired) return { display: "No AMC", cls: "" };
+      if (!amcEndDate) return { display: "AMC expiry pending", cls: "amber" };
+      const d = fmtDate(amcEndDate);
+      const days = daysUntil(amcEndDate);
+      if (days < 30) return { display: `${d} (${days}d)`, cls: "red" };
+      if (days < 90) return { display: `${d} (${days}d)`, cls: "amber" };
+      return { display: d, cls: "green" };
+    }
     if (!form.expiryDate) return { display: "—", cls: "" };
     const d = fmtDate(form.expiryDate);
     const days = daysUntil(form.expiryDate);
@@ -300,6 +315,14 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
     if (days < 90) return { display: `${d} (${days}d)`, cls: "amber" };
     return { display: d, cls: "green" };
   })();
+
+  const serialValueAt = (index: number) => serialList[index] ?? "";
+
+  const updateSerialAt = (index: number, value: string) => {
+    const next = Array.from({ length: Math.max(qty, index + 1) }, (_, i) => serialValueAt(i));
+    next[index] = value;
+    setSerialNumbers(next.join("\n"));
+  };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -311,7 +334,21 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
       ...f,
       unit: item.unit,
       expiryType: item.category === "CAPEX" ? "none" : "date",
+      batchNo: "",
+      mfgDate: "",
+      expiryDate: "",
     }));
+    setSerialNumbers("");
+    setAmcRequired(false);
+    setAmcNumber("");
+    setAmcStartDate("");
+    setAmcEndDate("");
+    setAmcSupplierName("");
+    setAmcValue("");
+    setAmcCoverageType("comprehensive");
+    setAmcServiceFrequency("");
+    setAmcContactPerson("");
+    setAmcContactPhone("");
   };
 
   // Fetch item detail by code and select it (used for deep-linking from DetailPanel)
@@ -408,14 +445,26 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
 
   const validateStep2 = () => {
     const errs: string[] = [];
-    if (!form.batchNo || !form.batchNo.trim()) errs.push('Batch number is required');
     if (!form.qty || Number(form.qty) <= 0) errs.push('Quantity must be greater than zero');
-    if (form.expiryType !== 'none' && !form.expiryDate) errs.push('Expiry date is required');
-    if (!form.mfgDate) errs.push('Manufacturing date is required');
+    if (selectedItem?.category === "OPEX") {
+      if (!form.batchNo || !form.batchNo.trim()) errs.push('Batch number is required');
+      if (form.expiryType !== 'none' && !form.expiryDate) errs.push('Expiry date is required');
+      if (!form.mfgDate) errs.push('Manufacturing date is required');
+    }
+    if (selectedItem?.category === "CAPEX") {
+      if (!form.batchNo || !form.batchNo.trim()) errs.push('Procurement / asset reference is required');
+      if (!serialList.length) errs.push('At least one serial number is required for CAPEX');
+      if (serialList.length !== Number(form.qty || 0)) {
+        errs.push(`Enter exactly ${Number(form.qty || 0)} serial number${Number(form.qty || 0) === 1 ? '' : 's'} for this CAPEX receipt`);
+      }
+    }
     if (!form.supplierName || !form.supplierName.trim()) errs.push('Supplier name is required');
     if (!form.invoiceNo || !form.invoiceNo.trim()) errs.push('Invoice / Challan number is required');
-    if (selectedItem?.category === "CAPEX" && amcRequired && !amcEndDate) {
-      errs.push("AMC contract end date is required when AMC is enabled");
+    if (selectedItem?.category === "CAPEX" && amcRequired) {
+      if (!amcSupplierName.trim()) errs.push("AMC vendor is required when AMC is enabled");
+      if (!amcNumber.trim()) errs.push("AMC number is required when AMC is enabled");
+      if (!amcStartDate) errs.push("AMC contract start date is required when AMC is enabled");
+      if (!amcEndDate) errs.push("AMC contract end date is required when AMC is enabled");
     }
     if (errs.length) {
       alert(errs.join('\n'))
@@ -448,6 +497,87 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
         ],
       }
     : { item: [], supplier: [] };
+
+  const itemConfirmRows: ([string, string, string?])[] = selectedItem
+    ? [
+        ["Item name", selectedItem.name, ""],
+        ["Item ID", selectedItem.id, ""],
+        [isCapex ? "Asset ref" : "Batch number", form.batchNo || "-", "mono"],
+        ["Quantity", `${qty.toLocaleString()} ${form.unit}`, "green"],
+        ...(isCapex
+          ? ([
+              ["Serial numbers", serialList.join(", ") || "-", "mono"] as [string, string, string?],
+              ["AMC required", amcRequired ? "Yes" : "No", ""],
+              ["AMC expiry", amcRequired ? fmtDate(amcEndDate) : "No AMC", ""],
+            ] as [string, string, string?][])
+          : ([
+              ["Mfg date", fmtDate(form.mfgDate), ""] as [string, string, string?],
+              ["Expiry date", fmtDate(form.expiryDate), ""],
+            ] as [string, string, string?][])),
+        ["Store", form.storeLocation, ""],
+        ["Stock change", `${selectedItem.currentStock.toLocaleString()} -> ${newStock.toLocaleString()} ${form.unit}`, "green"],
+      ]
+    : [];
+
+  const consequenceItems = selectedItem
+    ? [
+        {
+          label: "Stock increases live",
+          desc: `${selectedItem.name} stock will increase from ${selectedItem.currentStock.toLocaleString()} to ${newStock.toLocaleString()} ${form.unit}.`,
+        },
+        {
+          label: isCapex ? "Asset records created" : "New batch added to registry",
+          desc: isCapex
+            ? `${qty} unit record${qty === 1 ? "" : "s"} created with serial number${qty === 1 ? "" : "s"}: ${serialList.join(", ") || "-"}`
+            : `Batch ${form.batchNo || "-"} will be added as batch #${selectedItem.batches.length + 1} for this item.`,
+        },
+        {
+          label: isCapex ? "AMC tracking updated" : "Expiry tracking begins",
+          desc: isCapex
+            ? (amcRequired ? `AMC alerts will track expiry on ${fmtDate(amcEndDate)}.` : "No AMC contract will be attached for this asset.")
+            : (form.expiryDate ? `Alert will fire ${daysUntil(form.expiryDate)} days from now (${fmtDate(form.expiryDate)}).` : "No expiry tracked for this batch."),
+        },
+        {
+          label: `QR label${isCapex && qty > 1 ? "s" : ""} ready to print`,
+          desc: isCapex
+            ? `${qty} QR sticker${qty === 1 ? "" : "s"} generated - one per serial number.`
+            : "A QR sticker for this batch will be generated. Print and stick on the shelf.",
+        },
+      ]
+    : [];
+
+  const detailPreviewRows: ([string, string, string?])[] = selectedItem
+    ? isCapex
+      ? [
+          ["Asset ref", form.batchNo || "-", "mono"],
+          ["Quantity", qty > 0 ? `+${qty.toLocaleString()} ${selectedItem.unit}` : "-", "green mono"],
+          ["Serials", serialList.join(", ") || "-", "mono"],
+          ["AMC", amcRequired ? "Required" : "No AMC"],
+          ["AMC expiry", expiryInfo.display, expiryInfo.cls],
+          ["Supplier", form.supplierName || "-"],
+          ["Invoice", form.invoiceNo || "-"],
+        ]
+      : [
+          ["Batch no.", form.batchNo || "-", "mono"],
+          ["Quantity", qty > 0 ? `+${qty.toLocaleString()} ${selectedItem.unit}` : "-", "green mono"],
+          ["Expiry date", expiryInfo.display, expiryInfo.cls],
+          ["Supplier", form.supplierName || "-"],
+          ["Invoice", form.invoiceNo || "-"],
+        ]
+    : [];
+
+  const afterPreviewRows: ([string, string, string?])[] = selectedItem
+    ? [
+        [isCapex ? "Total procurements" : "Total batches", `${selectedItem.batches.length + 1} ${isCapex ? "procurements" : "batches"}`],
+        ["New total stock", `${newStock.toLocaleString()} ${selectedItem.unit}`, "green mono"],
+        ...(isCapex && amcRequired && amcEndDate && daysUntil(amcEndDate) < 90
+          ? [["AMC alert", `Will trigger in ${daysUntil(amcEndDate)}d`, "amber"] as [string, string, string?]]
+          : []),
+        ...(!isCapex && form.expiryDate && daysUntil(form.expiryDate) < 90
+          ? [["Expiry alert", `Will trigger in ${daysUntil(form.expiryDate)}d`, "amber"] as [string, string, string?]]
+          : []),
+      ]
+    : [];
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
@@ -497,7 +627,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                       {stepState(i) === "done" ? "✓" : i}
                     </div>
                     <div className={`step-label ${stepState(i)}`}>
-                      {["Find item", "Enter batch details", "Confirm & save"][i - 1]}
+                      {["Find item", `Enter ${detailLabel}`, "Confirm & save"][i - 1]}
                     </div>
                   </div>
                   {i < 3 && (
@@ -608,7 +738,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                   <div className="action-row" style={{ marginTop: 4 }}>
                     <button className="btn-cancel" onClick={resetAll}>Cancel</button>
                     <button className="btn-next" disabled={!selectedItem} onClick={() => goStep(2)}>
-                      Next: Enter batch details →
+                      Next: Enter {detailLabel} →
                     </button>
                   </div>
                 </div>
@@ -623,9 +753,14 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                   {/* Batch & quantity card */}
                   <div className="form-card anim-in" style={{ animationDelay: "0.04s" }}>
                     <div className="fc-head">
-                      <div className="fc-title"><div className="fc-step-dot">2</div>Batch &amp; quantity details</div>
+                      <div className="fc-title">
+                        <div className="fc-step-dot">2</div>
+                        {isCapex ? "CAPEX procurement & serial details" : "OPEX batch & expiry details"}
+                      </div>
                     </div>
                     <div className="fc-body">
+                      {!isCapex ? (
+                        <>
                       <div className="field-grid g2" style={{ marginBottom: 14 }}>
                         <div className="field">
                           <label>Batch number <span className="req">*</span></label>
@@ -688,6 +823,54 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                       {/* FEFO preview */}
                       {fefoList.length > 0 && (
                         <FefoPreview fefoList={fefoList} unit={selectedItem.unit} />
+                      )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="field-grid g2" style={{ marginBottom: 14 }}>
+                            <div className="field">
+                              <label>Procurement / asset reference <span className="req">*</span></label>
+                              <input type="text" placeholder="e.g. PHILIPS-USG-2026-01" value={form.batchNo}
+                                onChange={(e) => setForm((f) => ({ ...f, batchNo: e.target.value }))} />
+                              <div className="field-hint">This is used as the GRN asset reference.</div>
+                            </div>
+                            <div className="field">
+                              <label>Quantity received <span className="req">*</span></label>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <input type="number" placeholder="0" style={{ flex: 1 }} min={1} value={form.qty}
+                                  onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))} />
+                                <select style={{ width: 80 }} value={form.unit}
+                                  onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
+                                  {["nos", "Pcs", "unit", "set"].map((u) => <option key={u}>{u}</option>)}
+                                </select>
+                              </div>
+                              {qty > 0 && selectedItem && (
+                                <div className="field-computed">
+                                  Stock after GRN: {newStock.toLocaleString()} {form.unit}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="serial-list">
+                            {qty <= 0 ? (
+                              <div className="serial-empty">Enter quantity above to generate serial number fields</div>
+                            ) : (
+                              Array.from({ length: qty }, (_, index) => (
+                                <div className="serial-item" key={index}>
+                                  <div className="serial-num-label">{index + 1}</div>
+                                  <input
+                                    className={`serial-input ${serialValueAt(index) ? "filled" : ""}`}
+                                    value={serialValueAt(index)}
+                                    onChange={(event) => updateSerialAt(index, event.target.value)}
+                                    placeholder={`Serial number for unit ${index + 1}`}
+                                  />
+                                  <div className="field-hint">Read from machine label</div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -760,27 +943,13 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                       </div>
                     </div>
                   </div>
-                  {/* CAPEX asset & AMC card */}
+                  {/* CAPEX AMC card */}
                   {selectedItem.category === "CAPEX" && (
                     <div className="form-card anim-in" style={{ animationDelay: "0.16s" }}>
                       <div className="fc-head">
-                        <div className="fc-title">CAPEX asset &amp; AMC details</div>
+                        <div className="fc-title">CAPEX AMC details</div>
                       </div>
                       <div className="fc-body">
-                        <div className="field" style={{ marginBottom: 14 }}>
-                          <label>Serial numbers</label>
-                          <textarea
-                            value={serialNumbers}
-                            onChange={(event) => setSerialNumbers(event.target.value)}
-                            placeholder="One serial number per line or comma-separated"
-                            rows={3}
-                            style={{ resize: "vertical" }}
-                          />
-                          <div className="field-hint">
-                            These serials belong to this procurement / GRN batch.
-                          </div>
-                        </div>
-
                         <label className="toggle-row">
                           <input
                             type="checkbox"
@@ -793,7 +962,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                         {amcRequired && (
                           <div className="field-grid g3" style={{ marginTop: 14 }}>
                             <div className="field">
-                              <label>AMC number</label>
+                              <label>AMC number <span className="req">*</span></label>
                               <input
                                 value={amcNumber}
                                 onChange={(event) => setAmcNumber(event.target.value)}
@@ -802,7 +971,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                             </div>
 
                             <div className="field">
-                              <label>AMC supplier</label>
+                              <label>AMC supplier <span className="req">*</span></label>
                               <input
                                 value={amcSupplierName}
                                 onChange={(event) => setAmcSupplierName(event.target.value)}
@@ -811,7 +980,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                             </div>
 
                             <div className="field">
-                              <label>Contract start</label>
+                              <label>Contract start <span className="req">*</span></label>
                               <input
                                 type="date"
                                 value={amcStartDate}
@@ -899,8 +1068,8 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                     <div className="fc-body">
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
-                          <div className="confirm-section-title">Item &amp; batch</div>
-                          {confirmRows.item.map(([l, v, c]) => (
+                          <div className="confirm-section-title">Item &amp; {isCapex ? "asset" : "batch"}</div>
+                          {itemConfirmRows.map(([l, v, c]) => (
                             <div key={l} className="confirm-row">
                               <span style={{ color: "var(--text-dim)" }}>{l}</span>
                               <span style={{ color: c === "green" ? "var(--green)" : c === "mono" ? "var(--mono)" : "var(--text)", fontWeight: 500, textAlign: "right" }}>{v}</span>
@@ -927,12 +1096,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                     </div>
                     <div className="fc-body">
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {[
-                          { label: "Stock increases live", desc: `${selectedItem.name} stock will increase from ${selectedItem.currentStock.toLocaleString()} to ${newStock.toLocaleString()} ${form.unit}.` },
-                          { label: "New batch added to registry", desc: `Batch ${form.batchNo || "—"} will be added as batch #${selectedItem.batches.length + 1} for this item.` },
-                          { label: "Expiry tracking begins", desc: form.expiryDate ? `Alert will fire ${daysUntil(form.expiryDate)} days from now (${fmtDate(form.expiryDate)}).` : "No expiry tracked for this item (CAPEX asset)." },
-                          { label: "QR label ready to print", desc: "A QR sticker for this batch will be generated. Print and stick on the shelf." },
-                        ].map((item, i) => (
+                        {consequenceItems.map((item, i) => (
                           <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 12.5 }}>
                             <div className="confirm-num">{i + 1}</div>
                             <div>
@@ -960,7 +1124,9 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                   <div className="sc-title">GRN recorded successfully</div>
                   <div className="sc-sub">
                     {successGRNId} saved. {selectedItem.name} stock increased by {qty.toLocaleString()} {selectedItem.unit}.{" "}
-                    Batch {form.batchNo} is now tracked with FEFO ordering.
+                    {isCapex
+                      ? `${qty} asset QR label${qty === 1 ? "" : "s"} generated for serial tracking.`
+                      : `Batch ${form.batchNo} is now tracked with FEFO ordering.`}
                   </div>
                   <div className="sc-actions">
                     <button className="sc-btn sc-btn-white" onClick={() => alert("Sending QR label to printer…")}>Print QR label</button>
@@ -1005,26 +1171,9 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                         ["Min stock level", `${selectedItem.minStock.toLocaleString()} ${selectedItem.unit}`, "mono"],
                       ]} />
 
-                      <PreviewSection title="New batch" rows={[
-                        ["Batch no.", form.batchNo || "—", "mono"],
-                        ["Quantity", qty > 0 ? `+${qty.toLocaleString()} ${selectedItem.unit}` : "—", "green mono"],
-                        ["Expiry date", expiryInfo.display, expiryInfo.cls],
-                        ["Supplier", form.supplierName || "—"],
-                        ["Invoice", form.invoiceNo || "—"],
-                      ]} />
+                      <PreviewSection title={isCapex ? "Asset" : "New batch"} rows={detailPreviewRows} />
 
-                      {
-                        (() => {
-                          const afterRows: [string, string, string?][] = [
-                            ["Total batches", `${selectedItem.batches.length + 1} batches`],
-                            ["New total stock", `${newStock.toLocaleString()} ${selectedItem.unit}`, "green mono"],
-                          ];
-                          if (form.expiryDate && daysUntil(form.expiryDate) < 90) {
-                            afterRows.push(["⚠ Expiry alert", `Will trigger in ${daysUntil(form.expiryDate)}d`, "amber"]);
-                          }
-                          return <PreviewSection title="After saving" rows={afterRows} />;
-                        })()
-                      }
+                      <PreviewSection title="After saving" rows={afterPreviewRows} />
                     </>
                   )}
                 </div>
@@ -1231,6 +1380,13 @@ width:100%;}
   height:14px;
   accent-color:var(--green);
 }
+
+.serial-list{display:flex;flex-direction:column;gap:8px}
+.serial-empty{padding:12px;background:var(--bg);border-radius:var(--r-md);font-size:11.5px;color:var(--text-dim);text-align:center}
+.serial-item{display:grid;grid-template-columns:26px minmax(180px,1fr) auto;align-items:center;gap:8px}
+.serial-num-label{width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.serial-input{padding:7px 10px;min-height:36px;border:1.5px solid var(--border);border-radius:10px;font-family:var(--mono);font-size:12.5px;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s,background 0.15s}
+.serial-input:focus,.serial-input.filled{border-color:var(--green);background:var(--green-light)}
 
 /* Batch warning box */
 .batch-warn-box{background:var(--amber-light);border:1px solid rgba(146,64,14,0.25);border-radius:var(--r-md);padding:10px 12px;font-size:12px;color:var(--amber);display:none;margin-top:6px}
