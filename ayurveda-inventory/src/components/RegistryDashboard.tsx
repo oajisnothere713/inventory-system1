@@ -459,25 +459,6 @@ export default function AyurVaidyaRegistry() {
       />
 
       {/* ── Demo toolbar ───────────────────────────────────────── */}
-      <div className="demo-bar">
-        <span className="demo-bar-label">Simulate dashboard link:</span>
-        {[
-          ["all-expiry",    "⏰ Expiring"],
-          ["all-low",       "📉 Low stock"],
-          ["all-amc",       "📋 AMC due"],
-          ["all-expired",   "🚫 Expired"],
-          ["capex-devices", "🩺 Devices"],
-          ["capex-elec",    "💡 Electrical"],
-          ["opex-meds",     "🌿 Medicines"],
-          ["opex-cons",     "📦 Consumables"],
-          ["highlight-neem","🔗 Highlight item"],
-          ["all",           "✕ Clear"],
-        ].map(([key, label]) => (
-          <button key={key} className="demo-btn" onClick={() => applyDeepLink(DEMO_SCENARIOS[key] || {})}>
-            {label}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
