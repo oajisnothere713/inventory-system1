@@ -75,6 +75,17 @@ function fmtDate(d: string | null | undefined): string {
 }
 
 /* ── GLOBAL CSS ──────────────────────────────────────────── */
+function parseQrPayload(raw: string) {
+  const text = String(raw || "").trim();
+  const itemMatch = text.match(/(?:^|\|)ITEM:([^|]+)/i);
+  const batchMatch = text.match(/(?:^|\|)BATCH:([^|]+)/i);
+
+  return {
+    itemCode: itemMatch ? itemMatch[1] : text,
+    batchNo: batchMatch ? batchMatch[1] : "",
+  };
+}
+
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -427,8 +438,15 @@ export default function AyurVaidyaStockIssue({ embedded = true }: { embedded?: b
   }
 
   function selectItemById(id: string) {
+    const parsed = parseQrPayload(id);
+    if (parsed.batchNo) {
+      try {
+        sessionStorage.setItem('openItemForISSBatch', parsed.batchNo);
+      } catch {}
+    }
+
     // fetch detail from server
-    fetch(`/api/items/detail?code=${encodeURIComponent(id)}`)
+    fetch(`/api/items/detail?code=${encodeURIComponent(parsed.itemCode)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data && !data.error) {

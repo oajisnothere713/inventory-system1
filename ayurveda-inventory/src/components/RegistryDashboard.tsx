@@ -51,12 +51,16 @@ export default function AyurVaidyaRegistry() {
         type RawBatch = { 
           batch?: string | null;
           stock?: number | string | null;
+          mfgDate?: string | null;
           expiry?: string | null;
           supplier?: string | null;
           price?: number | string | null;
           location?: string | null;
           grn?: string | null;
           grnDate?: string | null;
+          invoice?: string | null;
+          invoiceDate?: string | null;
+          notes?: string | null;
           serials?: string[] | null;
           amc?: string | null;
           amcExpiry?: string | null;
@@ -90,12 +94,16 @@ export default function AyurVaidyaRegistry() {
           const batches: Batch[] = rawBatches.map((b) => ({
             batch: String(b.batch ?? ""),
             stock: Number(b.stock ?? 0),
+            mfgDate: b.mfgDate ?? null,
             expiry: b.expiry ?? null,
             supplier: b.supplier ?? null,
             price: b.price ? Number(b.price) : null,
             location: b.location ?? null,
             grn: b.grn ?? null,
             grnDate: b.grnDate ?? null,
+            invoice: b.invoice ?? null,
+            invoiceDate: b.invoiceDate ?? null,
+            notes: b.notes ?? null,
             serials: Array.isArray(b.serials) ? b.serials : [],
             amc: b.amc ?? null,
             amcExpiry: b.amcExpiry ?? null,

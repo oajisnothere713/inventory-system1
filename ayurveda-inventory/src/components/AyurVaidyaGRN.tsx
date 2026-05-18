@@ -56,6 +56,12 @@ const fmtDate = (d: string) =>
 const daysUntil = (d: string) =>
   Math.round((new Date(d).getTime() - new Date().getTime()) / 86400000);
 
+function parseQrPayload(raw: string) {
+  const text = String(raw || "").trim();
+  const itemMatch = text.match(/(?:^|\|)ITEM:([^|]+)/i);
+  return itemMatch ? itemMatch[1] : text;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
@@ -353,8 +359,9 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
 
   // Fetch item detail by code and select it (used for deep-linking from DetailPanel)
   function selectItemById(id: string) {
-    if (!id) return;
-    fetch(`/api/items/detail?code=${encodeURIComponent(id)}`)
+    const itemCode = parseQrPayload(id);
+    if (!itemCode) return;
+    fetch(`/api/items/detail?code=${encodeURIComponent(itemCode)}`)
       .then((r) => r.json())
       .then((data) => {
         if (!data || data.error) return;
