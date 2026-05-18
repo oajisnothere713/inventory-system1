@@ -19,13 +19,24 @@ type NewItemForm = {
   description: string;
   initialQuantity: string;
   batchNumber: string;
+  mfgDate: string;
   expiryDate: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  pricePerUnit: string;
+  storeLocation: string;
+  notes: string;
   serialNumbers: string;
   amcRequired: boolean;
   amcNumber: string;
   amcStartDate: string;
   amcEndDate: string;
   amcSupplierId: string;
+  amcValue: string;
+  amcCoverageType: string;
+  amcServiceFrequency: string;
+  amcContactPerson: string;
+  amcContactPhone: string;
   minStockLevel: string;
   maxStockLevel: string;
   reorderQty: string;
@@ -44,13 +55,24 @@ const initialNewItem: NewItemForm = {
   description: "",
   initialQuantity: "",
   batchNumber: "",
+  mfgDate: "",
   expiryDate: "",
+  invoiceNo: "",
+  invoiceDate: "",
+  pricePerUnit: "",
+  storeLocation: "Main Store",
+  notes: "",
   serialNumbers: "",
   amcRequired: false,
   amcNumber: "",
   amcStartDate: "",
   amcEndDate: "",
   amcSupplierId: "",
+  amcValue: "",
+  amcCoverageType: "comprehensive",
+  amcServiceFrequency: "",
+  amcContactPerson: "",
+  amcContactPhone: "",
   minStockLevel: "0",
   maxStockLevel: "",
   reorderQty: "",
@@ -188,9 +210,11 @@ export default function DetailPanel({
           minStockLevel: Number(newItem.minStockLevel || 0),
           maxStockLevel: newItem.maxStockLevel ? Number(newItem.maxStockLevel) : null,
           reorderQty: newItem.reorderQty ? Number(newItem.reorderQty) : null,
+          pricePerUnit: newItem.pricePerUnit ? Number(newItem.pricePerUnit) : null,
           primaryDeptId: Number(newItem.primaryDeptId),
           defaultSupplierId: newItem.defaultSupplierId ? Number(newItem.defaultSupplierId) : null,
           amcSupplierId: newItem.amcSupplierId ? Number(newItem.amcSupplierId) : null,
+          amcValue: newItem.amcValue ? Number(newItem.amcValue) : null,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -358,6 +382,58 @@ export default function DetailPanel({
         <p className="ni-help">Alert fires below this.</p>
       </div>
 
+      <div className="dp-section ni-section">
+        <div className="dp-section-title">Opening stock inward details</div>
+        <div className="ni-grid two">
+          <label className="ni-field">
+            <span>Invoice number</span>
+            <input
+              value={newItem.invoiceNo}
+              onChange={(event) => updateNewItem({ invoiceNo: event.target.value })}
+              placeholder="e.g. INV-2026-001"
+            />
+          </label>
+          <label className="ni-field">
+            <span>Invoice date</span>
+            <input
+              type="date"
+              value={newItem.invoiceDate}
+              onChange={(event) => updateNewItem({ invoiceDate: event.target.value })}
+            />
+          </label>
+        </div>
+        <div className="ni-grid two">
+          <label className="ni-field">
+            <span>Price per unit</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={newItem.pricePerUnit}
+              onChange={(event) => updateNewItem({ pricePerUnit: event.target.value })}
+              placeholder="Purchase rate"
+            />
+          </label>
+          <label className="ni-field">
+            <span>Store location</span>
+            <input
+              value={newItem.storeLocation}
+              onChange={(event) => updateNewItem({ storeLocation: event.target.value })}
+              placeholder="Main Store"
+            />
+          </label>
+        </div>
+        <label className="ni-field">
+          <span>Opening stock notes</span>
+          <textarea
+            value={newItem.notes}
+            onChange={(event) => updateNewItem({ notes: event.target.value })}
+            placeholder="Any inward, QC, storage, or procurement note"
+            rows={2}
+          />
+        </label>
+      </div>
+
       {newItem.category === "OPEX" ? (
         <div className="dp-section ni-section">
           <div className="dp-section-title">Batch & expiry</div>
@@ -370,6 +446,16 @@ export default function DetailPanel({
                 placeholder="e.g. BRT-2026-A1"
               />
             </label>
+            <label className="ni-field">
+              <span>Manufacture date</span>
+              <input
+                type="date"
+                value={newItem.mfgDate}
+                onChange={(event) => updateNewItem({ mfgDate: event.target.value })}
+              />
+            </label>
+          </div>
+          <div className="ni-grid two">
             <label className="ni-field">
               <span>Expiry date *</span>
               <input
@@ -447,6 +533,61 @@ export default function DetailPanel({
           ) : (
             <p className="ni-help">Leave AMC unchecked only for assets without a maintenance contract.</p>
           )}
+          {newItem.amcRequired ? (
+            <>
+              <div className="ni-grid two">
+                <label className="ni-field">
+                  <span>AMC value</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newItem.amcValue}
+                    onChange={(event) => updateNewItem({ amcValue: event.target.value })}
+                    placeholder="Contract value"
+                  />
+                </label>
+                <label className="ni-field">
+                  <span>Coverage type</span>
+                  <select
+                    value={newItem.amcCoverageType}
+                    onChange={(event) => updateNewItem({ amcCoverageType: event.target.value })}
+                  >
+                    <option value="comprehensive">Comprehensive</option>
+                    <option value="non_comprehensive">Non-comprehensive</option>
+                    <option value="parts_only">Parts only</option>
+                    <option value="labour_only">Labour only</option>
+                  </select>
+                </label>
+              </div>
+              <div className="ni-grid two">
+                <label className="ni-field">
+                  <span>Service frequency</span>
+                  <input
+                    value={newItem.amcServiceFrequency}
+                    onChange={(event) => updateNewItem({ amcServiceFrequency: event.target.value })}
+                    placeholder="e.g. Quarterly"
+                  />
+                </label>
+                <label className="ni-field">
+                  <span>AMC contact phone</span>
+                  <input
+                    value={newItem.amcContactPhone}
+                    onChange={(event) => updateNewItem({ amcContactPhone: event.target.value })}
+                    placeholder="Vendor support number"
+                  />
+                </label>
+              </div>
+              <label className="ni-field">
+                <span>AMC contact person</span>
+                <input
+                  value={newItem.amcContactPerson}
+                  onChange={(event) => updateNewItem({ amcContactPerson: event.target.value })}
+                  placeholder="Support contact name"
+                />
+              </label>
+            </>
+          ) : null}
         </div>
       )}
 
@@ -566,8 +707,12 @@ export default function DetailPanel({
                         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                           <div style={{ fontFamily: "var(--mono)", minWidth: 96 }}>{batch.batch}</div>
                           <div>{batch.stock} {item.unit}</div>
+                          <div>{batch.mfgDate ? `Mfg ${new Date(batch.mfgDate).toLocaleDateString("en-IN")}` : "Mfg -"}</div>
                           <div>{batch.expiry ? new Date(batch.expiry).toLocaleDateString("en-IN") : "-"}</div>
                           <div style={{ color: "var(--text-dim)" }}>{batch.supplier || "-"}</div>
+                          <div style={{ color: "var(--text-dim)" }}>GRN {batch.grn || "-"}</div>
+                          <div style={{ color: "var(--text-dim)" }}>Invoice {batch.invoice || "-"}</div>
+                          <div style={{ color: "var(--text-dim)" }}>{batch.location || "-"}</div>
                           <div style={{ color: "var(--text-dim)" }}>{status}</div>
                         </div>
 
@@ -617,15 +762,19 @@ export default function DetailPanel({
             {item.batches && item.batches.length ? (
               <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
                 {item.batches.map((batch: Batch, index: number) => (
-                  <div key={`${batch.batch}-${index}`} style={{ padding: 8, background: "#fafafa", borderRadius: 6 }}>
+                      <div key={`${batch.batch}-${index}`} style={{ padding: 8, background: "#fafafa", borderRadius: 6 }}>
                     <Field label="GRN" value={batch.grn || batch.batch || "-"} mono />
                     <Field label="Received" value={batch.grnDate ? new Date(batch.grnDate).toLocaleDateString("en-IN") : "-"} />
+                    <Field label="Invoice" value={batch.invoice || "-"} mono />
+                    <Field label="Invoice date" value={batch.invoiceDate ? new Date(batch.invoiceDate).toLocaleDateString("en-IN") : "-"} />
                     <Field label="Qty" value={`${batch.stock} ${item.unit}`} />
                     <Field label="Supplier" value={batch.supplier || "-"} />
+                    <Field label="Store location" value={batch.location || "-"} />
                     <Field label="AMC no." value={batch.amc || "No AMC"} mono />
                     <Field label="AMC vendor" value={batch.amcSupplier || "-"} />
                     <Field label="AMC expiry" value={batch.amcExpiry ? new Date(batch.amcExpiry).toLocaleDateString("en-IN") : "-"} />
                     <Field label="Serials" value={(batch.serials ?? []).join(", ") || "-"} mono />
+                    <Field label="Notes" value={batch.notes || "-"} />
                   </div>
                 ))}
               </div>

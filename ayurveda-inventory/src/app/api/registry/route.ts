@@ -48,6 +48,7 @@ export async function GET() {
           ib.batch_id,
           ib.batch_number AS batch,
           ib.quantity_available AS stock,
+          to_char(ib.mfg_date, 'YYYY-MM-DD') AS mfg_date,
           to_char(ib.expiry_date, 'YYYY-MM-DD') AS expiry,
           sup.supplier_name AS supplier,
           ib.purchase_price AS price,
@@ -55,6 +56,9 @@ export async function GET() {
           ib.serial_numbers AS serial_numbers,
           g.grn_number AS grn,
           to_char(g.grn_date, 'YYYY-MM-DD') AS grn_date,
+          g.invoice_number AS invoice,
+          to_char(g.invoice_date, 'YYYY-MM-DD') AS invoice_date,
+          ib.notes AS notes,
           ac.amc_number AS amc,
           to_char(ac.contract_end, 'YYYY-MM-DD') AS amc_expiry,
           ac.status AS amc_status,
@@ -87,12 +91,16 @@ export async function GET() {
       batchesByItem[id].push({
         batch: b["batch"] as string,
         stock: Number(b["stock"] ?? 0),
+        mfgDate: (b["mfg_date"] as string) || null,
         expiry: (b["expiry"] as string) || null,
         supplier: (b["supplier"] as string) || null,
         price: b["price"] ?? null,
         location: b["location"] ?? null,
         grn: (b["grn"] as string) || null,
         grnDate: (b["grn_date"] as string) || null,
+        invoice: (b["invoice"] as string) || null,
+        invoiceDate: (b["invoice_date"] as string) || null,
+        notes: (b["notes"] as string) || null,
         serials,
         amc: (b["amc"] as string) || null,
         amcExpiry: (b["amc_expiry"] as string) || null,
@@ -208,6 +216,14 @@ export async function POST(req: Request) {
     const itemType = String(body.itemType ?? '').trim() || null
     const description = String(body.description ?? '').trim() || null
     const supplierBarcode = String(body.supplierBarcode ?? '').trim() || null
+    const mfgDateInput = String(body.mfgDate ?? '').trim()
+    const invoiceNo = String(body.invoiceNo ?? '').trim() || 'OPENING-STOCK'
+    const invoiceDateInput = String(body.invoiceDate ?? '').trim()
+    const storeLocation = String(body.storeLocation ?? '').trim() || 'Main Store'
+    const openingNotes = String(body.notes ?? '').trim() || 'Opening quantity from item registration'
+    const pricePerUnit = body.pricePerUnit === null || body.pricePerUnit === '' || body.pricePerUnit === undefined
+      ? null
+      : Number(body.pricePerUnit)
     const minStockLevel = Number.isFinite(Number(body.minStockLevel)) ? Number(body.minStockLevel) : 0
     const maxStockLevel = body.maxStockLevel === null || body.maxStockLevel === '' || body.maxStockLevel === undefined
       ? null
@@ -222,6 +238,10 @@ export async function POST(req: Request) {
 
     if (reorderQty !== null && !Number.isFinite(reorderQty)) {
       return NextResponse.json({ error: 'Reorder quantity is invalid' }, { status: 400 })
+    }
+
+    if (pricePerUnit !== null && !Number.isFinite(pricePerUnit)) {
+      return NextResponse.json({ error: 'Price per unit is invalid' }, { status: 400 })
     }
 
     const initialQuantity = body.initialQuantity === null || body.initialQuantity === '' || body.initialQuantity === undefined
@@ -243,6 +263,15 @@ export async function POST(req: Request) {
     const amcNumber = String(body.amcNumber ?? '').trim()
     const amcStartDate = String(body.amcStartDate ?? '').trim()
     const amcEndDate = String(body.amcEndDate ?? '').trim()
+    const amcValue = body.amcValue === null || body.amcValue === '' || body.amcValue === undefined
+      ? null
+      : Number(body.amcValue)
+    const amcCoverageType = ['comprehensive', 'non_comprehensive', 'parts_only', 'labour_only'].includes(String(body.amcCoverageType))
+      ? String(body.amcCoverageType)
+      : 'comprehensive'
+    const amcServiceFrequency = String(body.amcServiceFrequency ?? '').trim() || null
+    const amcContactPerson = String(body.amcContactPerson ?? '').trim() || null
+    const amcContactPhone = String(body.amcContactPhone ?? '').trim() || null
     const amcSupplierId = body.amcSupplierId === null || body.amcSupplierId === '' || body.amcSupplierId === undefined
       ? defaultSupplierId
       : Number(body.amcSupplierId)
@@ -269,6 +298,9 @@ export async function POST(req: Request) {
       if (!Number.isFinite(amcSupplierId)) {
         return NextResponse.json({ error: 'AMC supplier is required' }, { status: 400 })
       }
+      if (amcValue !== null && !Number.isFinite(amcValue)) {
+        return NextResponse.json({ error: 'AMC value is invalid' }, { status: 400 })
+      }
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -288,6 +320,7 @@ export async function POST(req: Request) {
             min_stock_level,
             max_stock_level,
             reorder_qty,
+            price_per_unit,
             supplier_barcode,
             has_expiry,
             has_amc,
@@ -311,8 +344,9 @@ export async function POST(req: Request) {
             $14,
             $15,
             $16,
+            $17,
             NOW(),
-            $17
+            $18
           )
           RETURNING item_id, item_code
         `,
@@ -329,6 +363,7 @@ export async function POST(req: Request) {
         minStockLevel,
         maxStockLevel,
         reorderQty,
+        pricePerUnit,
         supplierBarcode,
         category === 'OPEX',
         amcRequired,
@@ -359,8 +394,12 @@ export async function POST(req: Request) {
             quantity_received,
             unit,
             batch_number,
+            mfg_date,
             expiry_date,
             invoice_number,
+            invoice_date,
+            price_per_unit,
+            total_value,
             store_location,
             received_by,
             stock_before,
@@ -382,9 +421,13 @@ export async function POST(req: Request) {
             $10,
             $11,
             $12,
-            0,
             $13,
             $14,
+            $15,
+            $16,
+            0,
+            $17,
+            $18,
             CURRENT_TIMESTAMP
           )
         `,
@@ -396,12 +439,16 @@ export async function POST(req: Request) {
         initialQuantity,
         unit,
         batchNumber,
+        mfgDateInput ? new Date(mfgDateInput) : null,
         expiryDate,
-        'OPENING-STOCK',
-        'Main Store',
+        invoiceNo,
+        invoiceDateInput ? new Date(invoiceDateInput) : null,
+        pricePerUnit,
+        pricePerUnit ? pricePerUnit * initialQuantity : null,
+        storeLocation,
         createdBy,
         initialQuantity,
-        'Opening quantity from item registration'
+        openingNotes
       )
 
       await tx.$queryRawUnsafe(
@@ -412,9 +459,11 @@ export async function POST(req: Request) {
             batch_number,
             quantity_received,
             quantity_available,
+            mfg_date,
             expiry_date,
             grn_id,
             supplier_id,
+            purchase_price,
             storage_location,
             serial_numbers,
             notes,
@@ -433,6 +482,8 @@ export async function POST(req: Request) {
             $9,
             $10,
             $11,
+            $12,
+            $13,
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
           )
@@ -442,12 +493,14 @@ export async function POST(req: Request) {
         batchNumber,
         initialQuantity,
         initialQuantity,
+        mfgDateInput ? new Date(mfgDateInput) : null,
         expiryDate,
         grnId,
         defaultSupplierId,
-        'Main Store',
+        pricePerUnit,
+        storeLocation,
         category === 'CAPEX' ? serialNumbers : null,
-        'Opening quantity from item registration'
+        openingNotes
       )
 
       if (amcRequired) {
@@ -461,7 +514,11 @@ export async function POST(req: Request) {
               supplier_id,
               contract_start,
               contract_end,
+              amc_value,
               coverage_type,
+              service_frequency,
+              contact_person,
+              contact_phone,
               status,
               notes,
               created_at,
@@ -475,11 +532,15 @@ export async function POST(req: Request) {
               $5,
               $6,
               $7,
-              'comprehensive'::"AmcCoverageType",
-              'active'::"AmcStatus",
               $8,
+              $9::"AmcCoverageType",
+              $10,
+              $11,
+              $12,
+              'active'::"AmcStatus",
+              $13,
               CURRENT_TIMESTAMP,
-              $9
+              $14
             )
           `,
           amcNumber,
@@ -489,6 +550,11 @@ export async function POST(req: Request) {
           amcSupplierId,
           new Date(amcStartDate),
           new Date(amcEndDate),
+          amcValue,
+          amcCoverageType,
+          amcServiceFrequency,
+          amcContactPerson,
+          amcContactPhone,
           'AMC added during item registration',
           createdBy
         )

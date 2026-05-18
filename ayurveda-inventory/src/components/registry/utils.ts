@@ -33,6 +33,7 @@ export type Item = {
 export type Batch = {
   batch: string;
   stock: number;
+  mfgDate?: string | null;
   expiry?: string | null;
   supplier?: string | null;
   price?: number | null;
@@ -40,6 +41,9 @@ export type Batch = {
 
   grn?: string | null;
   grnDate?: string | null;
+  invoice?: string | null;
+  invoiceDate?: string | null;
+  notes?: string | null;
   serials?: string[];
 
   amc?: string | null;
