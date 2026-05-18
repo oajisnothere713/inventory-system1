@@ -77,12 +77,12 @@ function fmtDate(d: string | null | undefined): string {
 /* ── GLOBAL CSS ──────────────────────────────────────────── */
 function parseQrPayload(raw: string) {
   const text = String(raw || "").trim();
-  const itemMatch = text.match(/(?:^|\|)ITEM:([^|]+)/i);
-  const batchMatch = text.match(/(?:^|\|)BATCH:([^|]+)/i);
+  const itemMatch = text.match(/(?:^|[\n|])ITEM:\s*([^\n|]+)/i);
+  const batchMatch = text.match(/(?:^|[\n|])BATCH:\s*([^\n|]+)/i);
 
   return {
-    itemCode: itemMatch ? itemMatch[1] : text,
-    batchNo: batchMatch ? batchMatch[1] : "",
+    itemCode: itemMatch ? itemMatch[1].trim() : text,
+    batchNo: batchMatch ? batchMatch[1].trim() : "",
   };
 }
 

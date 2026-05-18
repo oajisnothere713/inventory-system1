@@ -104,20 +104,69 @@ const mapDetailItem = (data: RawRecord): Item => {
 const qrSrcFor = (payload: string) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`;
 
-const itemPayload = (itemId: string) => `ITEM:${itemId}`;
-const batchPayload = (itemId: string, batchNo: string) => `ITEM:${itemId}|BATCH:${batchNo}`;
-const serialPayload = (itemId: string, serial: string) => `ITEM:${itemId}|SERIAL:${serial}`;
+const cleanPayloadValue = (value: unknown) => {
+  const text = String(value ?? "").trim();
+  return text || "-";
+};
+
+const itemPayload = (item: Item) =>
+  [
+    "AyurVaidya Inventory QR",
+    "Type: Product",
+    `ITEM:${item.id}`,
+    `Item name: ${cleanPayloadValue(item.name)}`,
+    `Category: ${cleanPayloadValue(item.category)}`,
+    `Sub category: ${cleanPayloadValue(item.subcat)}`,
+    `Department: ${cleanPayloadValue(item.dept)}`,
+    `Stock: ${cleanPayloadValue(item.currentStock)} ${cleanPayloadValue(item.unit)}`,
+    `Minimum stock: ${cleanPayloadValue(item.minStock)} ${cleanPayloadValue(item.unit)}`,
+    `Supplier: ${cleanPayloadValue(item.supplier)}`,
+    `Batches/procurements: ${item.batches.length}`,
+    `Serial numbers: ${item.batches.reduce((sum, batch) => sum + (batch.serialNumbers?.length ?? 0), 0)}`,
+  ].join("\n");
+
+const batchPayload = (item: Item, batch: Batch) =>
+  [
+    "AyurVaidya Inventory QR",
+    "Type: OPEX batch",
+    `ITEM:${item.id}`,
+    `BATCH:${batch.batchNo}`,
+    `Item name: ${cleanPayloadValue(item.name)}`,
+    `Batch number: ${cleanPayloadValue(batch.batchNo)}`,
+    `Quantity available: ${cleanPayloadValue(batch.qty)} ${cleanPayloadValue(item.unit)}`,
+    `Mfg date: ${formatDate(batch.mfgDate)}`,
+    `Expiry date: ${formatDate(batch.expiry)}`,
+    `Supplier: ${cleanPayloadValue(batch.supplier || item.supplier)}`,
+    `GRN: ${cleanPayloadValue(batch.grnNumber)}`,
+    `Storage location: ${cleanPayloadValue(batch.storageLocation)}`,
+  ].join("\n");
+
+const serialPayload = (item: Item, target: SerialQrTarget, batch?: Batch) =>
+  [
+    "AyurVaidya Inventory QR",
+    "Type: CAPEX serial asset",
+    `ITEM:${item.id}`,
+    `SERIAL:${target.serial}`,
+    `Item name: ${cleanPayloadValue(item.name)}`,
+    `Serial number: ${cleanPayloadValue(target.serial)}`,
+    `Batch/procurement: ${cleanPayloadValue(target.batchNo)}`,
+    `Department: ${cleanPayloadValue(item.dept)}`,
+    `Supplier: ${cleanPayloadValue(batch?.supplier || item.supplier)}`,
+    `GRN: ${cleanPayloadValue(batch?.grnNumber)}`,
+    `AMC number: ${cleanPayloadValue(batch?.amcNumber)}`,
+    `AMC expiry: ${formatDate(batch?.amcExpiry)}`,
+  ].join("\n");
 
 const parseQrPayload = (raw: string): QrPayload => {
   const text = String(raw || "").trim();
-  const itemMatch = text.match(/(?:^|\|)ITEM:([^|]+)/i);
-  const batchMatch = text.match(/(?:^|\|)BATCH:([^|]+)/i);
-  const serialMatch = text.match(/(?:^|\|)SERIAL:([^|]+)/i);
+  const itemMatch = text.match(/(?:^|[\n|])ITEM:\s*([^\n|]+)/i);
+  const batchMatch = text.match(/(?:^|[\n|])BATCH:\s*([^\n|]+)/i);
+  const serialMatch = text.match(/(?:^|[\n|])SERIAL:\s*([^\n|]+)/i);
 
   return {
-    itemCode: itemMatch ? itemMatch[1] : text,
-    batchNo: batchMatch ? batchMatch[1] : "",
-    serial: serialMatch ? serialMatch[1] : "",
+    itemCode: itemMatch ? itemMatch[1].trim() : text,
+    batchNo: batchMatch ? batchMatch[1].trim() : "",
+    serial: serialMatch ? serialMatch[1].trim() : "",
     raw: text,
   };
 };
@@ -149,6 +198,38 @@ function DetailSummary({ item, scanned }: { item: Item; scanned: QrPayload | nul
           </div>
         ) : null}
       </div>
+
+      {scanned ? (
+        <div
+          style={{
+            marginTop: 12,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 8,
+            padding: 10,
+            border: "1px solid rgba(26, 107, 60, 0.18)",
+            borderRadius: 7,
+            background: "var(--green-light)",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-dim)" }}>QR type</div>
+            <div style={{ fontWeight: 700 }}>{scanned.batchNo ? "Batch" : scanned.serial ? "Serial asset" : "Product"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-dim)" }}>Item code</div>
+            <div style={{ fontFamily: "var(--mono)" }}>{scanned.itemCode}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-dim)" }}>Batch</div>
+            <div style={{ fontFamily: "var(--mono)" }}>{scanned.batchNo || matchingBatch?.batchNo || "-"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: "var(--text-dim)" }}>Serial</div>
+            <div style={{ fontFamily: "var(--mono)" }}>{scanned.serial || "-"}</div>
+          </div>
+        </div>
+      ) : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 12 }}>
         <div><strong>Stock:</strong> {item.currentStock} {item.unit}</div>
@@ -260,7 +341,8 @@ function QRCard({
             marginTop: 8,
             fontSize: 11,
             color: "var(--text-dim)",
-            wordBreak: "break-all",
+            wordBreak: "break-word",
+            whiteSpace: "pre-wrap",
             fontFamily: "var(--mono)",
           }}
         >
@@ -476,7 +558,7 @@ export default function QRGenerator() {
               <button className="btn-next" onClick={() => openInISS(selectedItem.id)}>
                 Open in Stock Issue
               </button>
-              <button className="btn-cancel" onClick={() => copyPayload(itemPayload(selectedItem.id))}>
+              <button className="btn-cancel" onClick={() => copyPayload(itemPayload(selectedItem))}>
                 Copy item payload
               </button>
             </div>
@@ -518,26 +600,29 @@ export default function QRGenerator() {
                   ? `Opens full asset details with ${serialTargets.length} serial number${serialTargets.length === 1 ? "" : "s"}`
                   : `Opens full product details with ${opexBatches.length} batch${opexBatches.length === 1 ? "" : "es"}`
               }
-              payload={itemPayload(selectedItem.id)}
+              payload={itemPayload(selectedItem)}
               onCopy={copyPayload}
             />
 
-            {selectedItem.category === "CAPEX" && serialTargets.map((target, index) => (
-              <QRCard
-                key={`${target.batchNo}-${target.serial}-${index}`}
-                title={target.serial}
-                meta={`Serial ${index + 1} - ${selectedItem.name}${target.batchNo ? ` - batch ${target.batchNo}` : ""}`}
-                payload={serialPayload(selectedItem.id, target.serial)}
-                onCopy={copyPayload}
-              />
-            ))}
+            {selectedItem.category === "CAPEX" && serialTargets.map((target, index) => {
+              const batch = selectedItem.batches.find((row) => row.batchNo === target.batchNo);
+              return (
+                <QRCard
+                  key={`${target.batchNo}-${target.serial}-${index}`}
+                  title={target.serial}
+                  meta={`Serial ${index + 1} - ${selectedItem.name}${target.batchNo ? ` - batch ${target.batchNo}` : ""}`}
+                  payload={serialPayload(selectedItem, target, batch)}
+                  onCopy={copyPayload}
+                />
+              );
+            })}
 
             {selectedItem.category === "OPEX" && opexBatches.map((batch) => (
               <QRCard
                 key={`${batch.batchNo}-${batch.expiry ?? ""}`}
                 title={batch.batchNo}
                 meta={`${batch.qty} ${selectedItem.unit} available${batch.expiry ? ` - expires ${batch.expiry.split("T")[0]}` : ""}`}
-                payload={batchPayload(selectedItem.id, batch.batchNo)}
+                payload={batchPayload(selectedItem, batch)}
                 onCopy={copyPayload}
               />
             ))}

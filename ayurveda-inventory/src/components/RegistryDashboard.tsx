@@ -337,6 +337,34 @@ export default function AyurVaidyaRegistry() {
     }   
   };
 
+  const deleteItem = async (item: Item) => {
+    const ok = window.confirm(`Delete ${item.name} (${item.id}) from Item Registry? Existing GRN and issue history will stay saved.`);
+    if (!ok) return;
+
+    try {
+      const response = await fetch(`/api/registry?code=${encodeURIComponent(item.id)}`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        alert(data.error || "Could not delete item.");
+        return;
+      }
+
+      setItems((current) => current.filter((row) => row.id !== item.id));
+      setDetailItem((current) => (current && current !== "new" && current.id === item.id ? null : current));
+      setFilters((current) => ({
+        ...current,
+        highlight: current.highlight === item.id ? null : current.highlight,
+        bannerMsg: `${item.name} deleted from Item Registry`,
+      }));
+    } catch (err) {
+      console.error(err);
+      alert("Could not delete item.");
+    }
+  };
+
   // ── Demo scenarios ────────────────────────────────────────────────────────
 
   const DEMO_SCENARIOS: Record<string, Partial<FilterState>> = {
@@ -455,7 +483,13 @@ export default function AyurVaidyaRegistry() {
             </div>
           </div>
         ) : (
-          <RegistryTable items={filtered} highlight={filters.highlight} onRowClick={(it) => setDetailItem(it)} highlightRef={highlightRef} />
+          <RegistryTable
+            items={filtered}
+            highlight={filters.highlight}
+            onRowClick={(it) => setDetailItem(it)}
+            onDeleteItem={deleteItem}
+            highlightRef={highlightRef}
+          />
         )}
       </div>
 
