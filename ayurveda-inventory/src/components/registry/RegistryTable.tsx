@@ -129,11 +129,13 @@ export default function RegistryTable({
   items,
   highlight,
   onRowClick,
+  onDeleteItem,
   highlightRef,
 }: {
   items: Item[];
   highlight: string | null;
   onRowClick: (item: Item) => void;
+  onDeleteItem: (item: Item) => void;
   highlightRef: React.RefObject<HTMLTableRowElement | null>;
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -248,6 +250,7 @@ export default function RegistryTable({
                         event.stopPropagation();
                         window.dispatchEvent(new CustomEvent("open-grn", { detail: item.id }));
                       }}>+ GRN</button>
+                      <button className="ra danger" onClick={(event) => { event.stopPropagation(); onDeleteItem(item); }}>Delete</button>
                     </div>
                   </td>
                 </tr>

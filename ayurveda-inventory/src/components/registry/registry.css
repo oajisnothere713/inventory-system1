@@ -252,7 +252,7 @@ tbody tr:hover .action-cell{opacity:1}
 .twrap col.stock { width: 148px; }
 .twrap col.exp { width: 190px; }
 .twrap col.dept { width: 86px; }
-.twrap col.act { width: 104px; }
+.twrap col.act { width: 150px; }
 
 .twrap thead tr {
   position: sticky;
@@ -433,8 +433,9 @@ tbody tr:hover .action-cell{opacity:1}
 .row-acts {
   display: flex;
   gap: 4px;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.1s;
+  flex-wrap: wrap;
 }
 
 .irow:hover .row-acts {
@@ -466,6 +467,18 @@ tbody tr:hover .action-cell{opacity:1}
 
 .ra.p:hover {
   background: var(--green-mid);
+}
+
+.ra.danger {
+  background: var(--red-light);
+  color: var(--red);
+  border-color: rgba(185, 28, 28, 0.25);
+}
+
+.ra.danger:hover {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
 }
 
 .ra:disabled {
@@ -654,12 +667,12 @@ tbody tr:hover .action-cell{opacity:1}
 
 .twrap col.tog { width: 3.2%; }
 .twrap col.code { width: 10.2%; }
-.twrap col.name { width: 24.2%; }
+.twrap col.name { width: 21.2%; }
 .twrap col.cat { width: 8.8%; }
 .twrap col.stock { width: 15.8%; }
 .twrap col.exp { width: 22%; }
 .twrap col.dept { width: 7.8%; }
-.twrap col.act { width: 8%; }
+.twrap col.act { width: 11%; }
 
 .twrap table {
   font-size: 12px;

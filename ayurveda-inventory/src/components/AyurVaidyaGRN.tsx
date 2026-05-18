@@ -58,8 +58,8 @@ const daysUntil = (d: string) =>
 
 function parseQrPayload(raw: string) {
   const text = String(raw || "").trim();
-  const itemMatch = text.match(/(?:^|\|)ITEM:([^|]+)/i);
-  return itemMatch ? itemMatch[1] : text;
+  const itemMatch = text.match(/(?:^|[\n|])ITEM:\s*([^\n|]+)/i);
+  return itemMatch ? itemMatch[1].trim() : text;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────

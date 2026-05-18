@@ -572,3 +572,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Could not create item' }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const code = new URL(req.url).searchParams.get('code')?.trim()
+
+    if (!code) {
+      return NextResponse.json({ error: 'Item code is required' }, { status: 400 })
+    }
+
+    const updated = await prisma.$queryRawUnsafe(
+      `
+        UPDATE items
+        SET is_active = false,
+            updated_at = NOW()
+        WHERE item_code = $1
+          AND is_active = true
+        RETURNING item_code
+      `,
+      code
+    ) as Array<Record<string, unknown>>
+
+    if (!updated.length) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ ok: true, itemCode: updated[0].item_code })
+  } catch (err) {
+    console.error('Error deleting registry item:', err)
+    return NextResponse.json({ error: 'Could not delete item' }, { status: 500 })
+  }
+}
