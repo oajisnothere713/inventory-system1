@@ -1005,6 +1005,34 @@ tbody tr:hover .action-cell{opacity:1}
   display:none;
 }
 
+.new-item-mode-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+
+.new-item-mode-tabs button{
+  min-height:44px;
+  border:0;
+  border-bottom:2px solid transparent;
+  background:transparent;
+  color:var(--text-dim);
+  font-family:var(--sans);
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+}
+
+.new-item-mode-tabs button:hover{
+  color:var(--text-mid);
+}
+
+.new-item-mode-tabs button.active{
+  color:var(--green);
+  border-bottom-color:var(--green);
+}
+
 .bulk-import-panel{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
