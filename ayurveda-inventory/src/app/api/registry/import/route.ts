@@ -129,9 +129,11 @@ export async function POST(req: Request) {
 
         let itemCode = clean(row.id || row.item_code || row.itemCode);
         const itemName = clean(row.name || row.item_name || row.itemName);
+        const itemNameHi = clean(row.item_name_hi || row.itemNameHi);
         const category = clean(row.category).toUpperCase();
         const subcat = clean(row.subcat || row.sub_category || row.subCategory).toLowerCase();
         const unit = clean(row.unit) || "nos";
+        const openingNotes = clean(row.notes || row.opening_notes || row.openingNotes);
 
         if (!itemName) {
           skipped.push({ row: index + 2, reason: "Missing item name" });
@@ -155,23 +157,28 @@ export async function POST(req: Request) {
           itemCode = await nextItemCode(tx, itemSubCategory);
         }
 
-        const deptNameOrCode = clean(row.dept || row.department || row.primary_dept) || "GEN";
+        const deptCode = clean(row.primary_dept_code || row.primaryDeptCode || row.dept_code || row.deptCode);
+        const deptName = clean(row.primary_dept_name || row.primaryDeptName || row.dept_name || row.deptName);
+        const deptNameOrCode = deptCode || deptName || clean(row.dept || row.department || row.primary_dept) || "GEN";
         let dept = await tx.department.findFirst({
           where: {
-            OR: [{ deptCode: deptNameOrCode }, { deptName: deptNameOrCode }],
+            OR: [
+              { deptCode: deptCode || deptNameOrCode },
+              { deptName: deptName || deptNameOrCode },
+            ],
           },
         });
 
         if (!dept) {
           dept = await tx.department.create({
             data: {
-              deptCode: makeDeptCode(deptNameOrCode),
-              deptName: deptNameOrCode,
+              deptCode: deptCode || makeDeptCode(deptNameOrCode),
+              deptName: deptName || deptNameOrCode,
             },
           });
         }
 
-        const supplierName = clean(row.supplier || row.default_supplier);
+        const supplierName = clean(row.supplier || row.default_supplier || row.default_supplier_name || row.defaultSupplierName);
         let supplierId: number | null = null;
 
         if (supplierName) {
@@ -197,11 +204,27 @@ export async function POST(req: Request) {
         const itemType = clean(row.sub || row.item_type || row.itemType);
         const description = clean(row.description);
         const supplierBarcode = clean(row.supplier_barcode || row.supplierBarcode);
+        const reorderQtyRaw = clean(row.reorder_qty || row.reorderQty);
+        const reorderQty = reorderQtyRaw ? Number(reorderQtyRaw) : null;
+        const amcRequired = category === "CAPEX" && ["true", "1", "yes", "y"].includes(clean(row.amc_required || row.amcRequired).toLowerCase());
+        const amcNumber = clean(row.amc_number || row.amcNumber);
+        const amcStartDate = toDate(row.amc_start_date || row.amcStartDate);
+        const amcEndDate = toDate(row.amc_end_date || row.amcEndDate);
+        const amcValueRaw = clean(row.amc_value || row.amcValue);
+        const amcValue = amcValueRaw ? Number(amcValueRaw) : null;
+        const amcCoverageType = ['comprehensive', 'non_comprehensive', 'parts_only', 'labour_only'].includes(clean(row.amc_coverage_type || row.amcCoverageType))
+          ? clean(row.amc_coverage_type || row.amcCoverageType)
+          : 'comprehensive';
+        const amcServiceFrequency = clean(row.amc_service_frequency || row.amcServiceFrequency) || null;
+        const amcContactPerson = clean(row.amc_contact_person || row.amcContactPerson) || null;
+        const amcContactPhone = clean(row.amc_contact_phone || row.amcContactPhone) || null;
+        const amcSupplierName = clean(row.amc_supplier_name || row.amcSupplierName || supplierName);
 
         const item = await tx.item.upsert({
           where: { itemCode },
           update: {
             itemName,
+            itemNameHi: itemNameHi || null,
             category: itemCategory,
             subCategory: itemSubCategory,
             itemType: itemType || null,
@@ -211,6 +234,7 @@ export async function POST(req: Request) {
             defaultSupplierId: supplierId,
             minStockLevel: min,
             maxStockLevel: max || null,
+            reorderQty,
             pricePerUnit: price || null,
             supplierBarcode: supplierBarcode || null,
             hasExpiry: itemCategory === "OPEX",
@@ -220,6 +244,7 @@ export async function POST(req: Request) {
           create: {
             itemCode,
             itemName,
+            itemNameHi: itemNameHi || null,
             category: itemCategory,
             subCategory: itemSubCategory,
             itemType: itemType || null,
@@ -229,6 +254,7 @@ export async function POST(req: Request) {
             defaultSupplierId: supplierId,
             minStockLevel: min,
             maxStockLevel: max || null,
+            reorderQty,
             pricePerUnit: price || null,
             supplierBarcode: supplierBarcode || null,
             hasExpiry: itemCategory === "OPEX",
@@ -269,13 +295,13 @@ export async function POST(req: Request) {
               grn_id, grn_number, grn_date, item_id, batch_id, supplier_id,
               quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number,
               invoice_date, price_per_unit, total_value, store_location, received_by,
-              stock_before, stock_after, created_at
+              stock_before, stock_after, notes, created_at
             )
             VALUES (
               ${grnId}, ${grnNumber}, CURRENT_DATE, ${item.itemId}, ${batchId}, ${supplierId},
               ${stock}, ${unit}, ${finalBatchNumber}, ${mfgDate}, ${expiryDate},
               ${invoiceNumber}, ${invoiceDate}, ${price || null}, ${price ? price * stock : null}, ${storeLocation},
-              ${systemUser.userId}, ${stockBefore}, ${stockBefore + stock}, CURRENT_TIMESTAMP
+              ${systemUser.userId}, ${stockBefore}, ${stockBefore + stock}, ${openingNotes || null}, CURRENT_TIMESTAMP
             )
           `;
 
@@ -283,14 +309,50 @@ export async function POST(req: Request) {
             INSERT INTO item_batches (
               batch_id, item_id, batch_number, quantity_received, quantity_available,
               mfg_date, expiry_date, grn_id, supplier_id, purchase_price, storage_location,
-              serial_numbers, created_at, updated_at
+              serial_numbers, notes, created_at, updated_at
             )
             VALUES (
               ${batchId}, ${item.itemId}, ${finalBatchNumber}, ${stock}, ${stock},
               ${mfgDate}, ${expiryDate}, ${grnId}, ${supplierId}, ${price || null},
-              ${storeLocation}, ${serialNumbers || null}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              ${storeLocation}, ${serialNumbers || null}, ${openingNotes || null}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
           `;
+
+          if (amcRequired && amcNumber && amcStartDate && amcEndDate) {
+            let resolvedAmcSupplierId = supplierId;
+
+            if (amcSupplierName && amcSupplierName !== supplierName) {
+              let amcSupplier = await tx.supplier.findFirst({
+                where: { supplierName: amcSupplierName },
+              });
+
+              if (!amcSupplier) {
+                amcSupplier = await tx.supplier.create({
+                  data: {
+                    supplierCode: makeSupplierCode(amcSupplierName),
+                    supplierName: amcSupplierName,
+                  },
+                });
+              }
+
+              resolvedAmcSupplierId = amcSupplier.supplierId;
+            }
+
+            await tx.$queryRaw`
+              INSERT INTO amc_contracts (
+                amc_number, item_id, batch_id, grn_id, supplier_id,
+                contract_start, contract_end, amc_value, coverage_type,
+                service_frequency, contact_person, contact_phone, status,
+                notes, created_at, created_by
+              )
+              VALUES (
+                ${amcNumber}, ${item.itemId}, ${batchId}, ${grnId}, ${resolvedAmcSupplierId},
+                ${amcStartDate}, ${amcEndDate}, ${amcValue}, ${amcCoverageType}::"AmcCoverageType",
+                ${amcServiceFrequency}, ${amcContactPerson}, ${amcContactPhone}, 'active'::"AmcStatus",
+                ${'AMC added during bulk import'}, CURRENT_TIMESTAMP, ${systemUser.userId}
+              )
+            `;
+          }
         }
 
         imported++;
