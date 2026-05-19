@@ -182,6 +182,7 @@ export default function DetailPanel({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [newItemMode, setNewItemMode] = useState<"single" | "bulk">("single");
   const bulkInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -192,6 +193,8 @@ export default function DetailPanel({
       if (!active) return;
       setNewItem(initialNewItem);
       setSaveError(null);
+      setBulkMessage(null);
+      setNewItemMode("single");
     });
 
     fetch("/api/registry/meta")
@@ -447,22 +450,41 @@ export default function DetailPanel({
         onChange={handleBulkImportFile}
       />
 
-      <div className="bulk-import-panel">
-        <div>
-          <div className="bulk-title">Add multiple items</div>
-          <div className="bulk-subtitle">Download the standard CSV, fill item rows, then import it here.</div>
-        </div>
-        <div className="bulk-actions">
-          <button className="bulk-btn" type="button" onClick={downloadBulkTemplate}>
-            Download template
-          </button>
-          <button className="bulk-btn primary" type="button" disabled={bulkImporting} onClick={() => bulkInputRef.current?.click()}>
-            {bulkImporting ? "Importing..." : "Import file"}
-          </button>
-        </div>
-        {bulkMessage ? <div className="bulk-message">{bulkMessage}</div> : null}
+      <div className="new-item-mode-tabs">
+        <button
+          type="button"
+          className={newItemMode === "single" ? "active" : ""}
+          onClick={() => setNewItemMode("single")}
+        >
+          Register one item
+        </button>
+        <button
+          type="button"
+          className={newItemMode === "bulk" ? "active" : ""}
+          onClick={() => setNewItemMode("bulk")}
+        >
+          Add multiple items
+        </button>
       </div>
 
+      {newItemMode === "bulk" ? (
+        <div className="bulk-import-panel">
+          <div>
+            <div className="bulk-title">Add multiple items</div>
+            <div className="bulk-subtitle">Download the standard CSV, fill item rows, then import it here.</div>
+          </div>
+          <div className="bulk-actions">
+            <button className="bulk-btn" type="button" onClick={downloadBulkTemplate}>
+              Download template
+            </button>
+            <button className="bulk-btn primary" type="button" disabled={bulkImporting} onClick={() => bulkInputRef.current?.click()}>
+              {bulkImporting ? "Importing..." : "Import file"}
+            </button>
+          </div>
+          {bulkMessage ? <div className="bulk-message">{bulkMessage}</div> : null}
+        </div>
+      ) : (
+        <>
       <div className="dp-section ni-section">
         <div className="dp-section-title">Item classification</div>
         <div className="ni-grid two">
@@ -885,7 +907,10 @@ export default function DetailPanel({
         <p className="ni-help">Used for auto-identification when scanning at GRN.</p>
       </div>
 
-      {saveError ? <div className="ni-error">{saveError}</div> : null}
+        </>
+      )}
+
+      {newItemMode === "single" && saveError ? <div className="ni-error">{saveError}</div> : null}
     </form>
   );
 
@@ -1072,9 +1097,11 @@ export default function DetailPanel({
         {item === "new" ? (
           <div className="dp-actions ni-actions">
             <button className="dp-btn" type="button" onClick={onClose}>Cancel</button>
-            <button className="dp-btn primary" type="button" disabled={saving} onClick={saveNewItem}>
-              {saving ? "Saving..." : "Save item ->"}
-            </button>
+            {newItemMode === "single" ? (
+              <button className="dp-btn primary" type="button" disabled={saving} onClick={saveNewItem}>
+                {saving ? "Saving..." : "Save item ->"}
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="dp-actions">
