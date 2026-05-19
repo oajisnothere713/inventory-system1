@@ -295,6 +295,56 @@ export default function AyurVaidyaRegistry() {
     setFilters({ category: "all", subcat: null, status: null, search: "", highlight: null, bannerMsg: null, sortCol: "status" });
   };
 
+  const exportRegistryRows = () => {
+    try {
+      const rows = filtered;
+      if (!rows || !rows.length) {
+        alert('No rows to export');
+        return;
+      }
+      const includeBatches = confirm('Include batch-level rows in CSV? Click OK to include, Cancel to export aggregated items.');
+      const cols = includeBatches
+        ? ['id','name','category','subcat','batch','stock','unit','dept','status','expiry','price']
+        : ['id','name','category','subcat','stock','min','max','unit','dept','status','expiry','price'];
+      const esc = (v: unknown) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+      }
+
+      const records: Record<string, unknown>[] = [];
+      if (includeBatches) {
+        for (const it of rows) {
+          const b = (it as Item).batches as Batch[] | undefined;
+          if (b && b.length) {
+            for (const bb of b) {
+              records.push({ id: it.id, name: it.name, category: it.category, subcat: it.subcat, batch: bb.batch, stock: bb.stock, unit: it.unit, dept: it.dept, status: it.status, expiry: bb.expiry || it.expiry, price: bb.price ?? it.price });
+            }
+            continue;
+          }
+          records.push({ id: it.id, name: it.name, category: it.category, subcat: it.subcat, batch: it.batch, stock: it.stock, unit: it.unit, dept: it.dept, status: it.status, expiry: it.expiry, price: it.price });
+        }
+      } else {
+        for (const it of rows) records.push(it as unknown as Record<string, unknown>);
+      }
+
+      const csv = [cols.join(',')].concat(records.map(r => {
+        return cols.map(c => esc((r as Record<string, unknown>)[c])).join(',');
+      })).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const name = 'registry-' + new Date().toISOString().slice(0,10) + '.csv';
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error(e); alert('Export failed') }
+  };
+
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -384,8 +434,19 @@ export default function AyurVaidyaRegistry() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  const attentionCount = items.filter((item) =>
+    ["expired", "amc_expired", "amc_due", "expiring", "low_stock"].includes(item.status)
+  ).length;
+
+  const registryStats = [
+    { value: items.length, label: "Total Items", tone: "green" },
+    { value: items.filter((item) => item.category === "CAPEX").length, label: "CAPEX Assets", tone: "blue" },
+    { value: items.filter((item) => item.category === "OPEX").length, label: "OPEX Items", tone: "green" },
+    { value: attentionCount, label: "Need Attention", tone: "amber" },
+  ];
+
   return (
-    <div className="av-app">
+    <div className="av-app registry-page">
       <input 
         ref={importInputRef}
         type="file"
@@ -401,10 +462,29 @@ export default function AyurVaidyaRegistry() {
      
 
       {/* ── Main ───────────────────────────────────────────────── */}
-      <div className="main">
+      <div className="main registry-main">
 
         {/* Topbar */}
-       
+        <div className="registry-head">
+          <div>
+            <div className="registry-kicker">Dashboard / <span>Item Registry</span></div>
+            <h1>Item Registry</h1>
+            <p>Master catalogue - item definitions, batch stock and asset records</p>
+          </div>
+          <div className="registry-head-actions">
+            <button className="btn" onClick={exportRegistryRows}>Export</button>
+            <button className="btn btn-primary" onClick={() => setDetailItem("new")}>+ Add New Item</button>
+          </div>
+        </div>
+
+        <div className="registry-stat-grid">
+          {registryStats.map((stat) => (
+            <div className="registry-stat-card" key={stat.label}>
+              <div className={`registry-stat-value ${stat.tone}`}>{stat.value}</div>
+              <div className="registry-stat-label">{stat.label}</div>
+            </div>
+          ))}
+        </div>
 
         <FilterBar
           filters={filters}
@@ -414,83 +494,34 @@ export default function AyurVaidyaRegistry() {
           setStatus={setStatus}
           clearAllFilters={clearAllFilters}
           totalCount={items.length}
-          onImport={() => importInputRef.current?.click()}
-          onExport={() => {
-            try {
-              const rows = filtered;
-              if (!rows || !rows.length) {
-                alert('No rows to export');
-                return;
-              }
-              const includeBatches = confirm('Include batch-level rows in CSV? Click OK to include, Cancel to export aggregated items.');
-              const cols = includeBatches
-                ? ['id','name','category','subcat','batch','stock','unit','dept','status','expiry','price']
-                : ['id','name','category','subcat','stock','min','max','unit','dept','status','expiry','price'];
-              const esc = (v: unknown) => {
-                if (v === null || v === undefined) return '';
-                const s = String(v);
-                if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
-                return s;
-              }
-
-              const records: Record<string, unknown>[] = [];
-              if (includeBatches) {
-                for (const it of rows) {
-                    const b = (it as Item).batches as Batch[] | undefined;
-                  if (b && b.length) {
-                    for (const bb of b) {
-                      records.push({ id: it.id, name: it.name, category: it.category, subcat: it.subcat, batch: bb.batch, stock: bb.stock, unit: it.unit, dept: it.dept, status: it.status, expiry: bb.expiry || it.expiry, price: bb.price ?? it.price });
-                    }
-                    continue;
-                  }
-                  // fallback single-row
-                  records.push({ id: it.id, name: it.name, category: it.category, subcat: it.subcat, batch: it.batch, stock: it.stock, unit: it.unit, dept: it.dept, status: it.status, expiry: it.expiry, price: it.price });
-                }
-              } else {
-                for (const it of rows) records.push(it as unknown as Record<string, unknown>);
-              }
-
-              const csv = [cols.join(',')].concat(records.map(r => {
-                return cols.map(c => esc((r as Record<string, unknown>)[c])).join(',');
-              })).join('\n');
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              const name = 'registry-' + new Date().toISOString().slice(0,10) + '.csv';
-              a.href = url;
-              a.download = name;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(url);
-            } catch (e) { console.error(e); alert('Export failed') }
-          }}
         />
 
-        <ResultStrip filters={filters} filteredCount={filtered.length} setFilters={setFilters} />
+        <div className="registry-table-card">
+          <ResultStrip filters={filters} filteredCount={filtered.length} setFilters={setFilters} />
 
-        {loading ? (
-          <div style={{ padding: 20 }}>
-            <div style={{ height: 18, width: 220, background: '#eee', borderRadius: 6, marginBottom: 12 }} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 12 }}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 12, background: '#fafafa', borderRadius: 8 }}>
-                  <div style={{ height: 14, width: 220, background: '#eee', borderRadius: 4 }} />
-                  <div style={{ height: 14, width: 80, background: '#eee', borderRadius: 4, marginLeft: 'auto' }} />
-                  <div style={{ height: 14, width: 80, background: '#eee', borderRadius: 4 }} />
-                </div>
-              ))}
+          {loading ? (
+            <div style={{ padding: 20 }}>
+              <div style={{ height: 18, width: 220, background: '#eee', borderRadius: 6, marginBottom: 12 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px', gap: 12 }}>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 12, background: '#fafafa', borderRadius: 8 }}>
+                    <div style={{ height: 14, width: 220, background: '#eee', borderRadius: 4 }} />
+                    <div style={{ height: 14, width: 80, background: '#eee', borderRadius: 4, marginLeft: 'auto' }} />
+                    <div style={{ height: 14, width: 80, background: '#eee', borderRadius: 4 }} />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <RegistryTable
-            items={filtered}
-            highlight={filters.highlight}
-            onRowClick={(it) => setDetailItem(it)}
-            onDeleteItem={deleteItem}
-            highlightRef={highlightRef}
-          />
-        )}
+          ) : (
+            <RegistryTable
+              items={filtered}
+              highlight={filters.highlight}
+              onRowClick={(it) => setDetailItem(it)}
+              onDeleteItem={deleteItem}
+              highlightRef={highlightRef}
+            />
+          )}
+        </div>
       </div>
 
       {/* ── Detail Panel ───────────────────────────────────────── */}

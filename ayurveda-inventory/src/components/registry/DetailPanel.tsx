@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Batch, Item, batchStatus, stockPct, expiryLabel, stockBarColor } from "./utils";
 import StatusPill from "./StatusPill";
 
@@ -81,6 +81,84 @@ const initialNewItem: NewItemForm = {
   supplierBarcode: "",
 };
 
+const bulkTemplateColumns = [
+  "item_code",
+  "item_name",
+  "category",
+  "subcat",
+  "unit",
+  "item_type",
+  "description",
+  "opening_quantity",
+  "batch_number",
+  "expiry_date",
+  "dept",
+  "supplier",
+  "min_stock",
+  "max_stock",
+  "price_per_unit",
+];
+
+function csvEscape(value: string | number) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        cell += '"';
+        index++;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        cell += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(cell.trim());
+      cell = "";
+    } else if (char === "\n") {
+      row.push(cell.trim());
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else if (char !== "\r") {
+      cell += char;
+    }
+  }
+
+  row.push(cell.trim());
+  rows.push(row);
+  return rows.filter((cells) => cells.some(Boolean));
+}
+
+function csvTextToObjects(text: string) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map((header) => header.trim());
+  return rows.slice(1).map((values) =>
+    headers.reduce<Record<string, string>>((record, header, index) => {
+      record[header] = values[index] ?? "";
+      return record;
+    }, {})
+  );
+}
+
 export default function DetailPanel({
   item,
   onClose,
@@ -95,6 +173,9 @@ export default function DetailPanel({
   const [meta, setMeta] = useState<RegistryMeta>({ departments: [], suppliers: [] });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const bulkInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (item !== "new") return;
@@ -232,6 +313,97 @@ export default function DetailPanel({
     }
   };
 
+  const downloadBulkTemplate = () => {
+    const sampleRows = [
+      [
+        "",
+        "Ashwagandha Churna",
+        "OPEX",
+        "medicines",
+        "g",
+        "Churna",
+        "Classical medicine powder",
+        1200,
+        "ASH-2026-A1",
+        "2027-08-01",
+        "PHM",
+        "AyurSupplier Pvt",
+        500,
+        2500,
+        0.85,
+      ],
+      [
+        "",
+        "Examination Lamp",
+        "CAPEX",
+        "devices",
+        "pcs",
+        "Medical Device",
+        "Portable examination lamp",
+        2,
+        "LAMP-OPEN",
+        "",
+        "OPD-GEN",
+        "MediStore",
+        1,
+        5,
+        4200,
+      ],
+    ];
+
+    const csv = [
+      bulkTemplateColumns.join(","),
+      ...sampleRows.map((row) => row.map(csvEscape).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ayurvaidya-bulk-item-template.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setBulkMessage(null);
+    setBulkImporting(true);
+
+    try {
+      const rows = csvTextToObjects(await file.text());
+
+      if (!rows.length) {
+        setBulkMessage("The selected file has no item rows.");
+        return;
+      }
+
+      const response = await fetch("/api/registry/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "Bulk import failed.");
+      }
+
+      const skipped = Array.isArray(data.skipped) ? data.skipped.length : 0;
+      setBulkMessage(`Imported ${data.imported ?? rows.length} items${skipped ? `, skipped ${skipped}` : ""}.`);
+      onItemCreated?.();
+    } catch (err) {
+      setBulkMessage(err instanceof Error ? err.message : "Bulk import failed.");
+    } finally {
+      setBulkImporting(false);
+      event.target.value = "";
+    }
+  };
+
   const renderNewItemForm = () => (
     <form
       className="new-item-form"
@@ -240,6 +412,30 @@ export default function DetailPanel({
         saveNewItem();
       }}
     >
+      <input
+        ref={bulkInputRef}
+        type="file"
+        accept=".csv"
+        className="bulk-file-input"
+        onChange={handleBulkImportFile}
+      />
+
+      <div className="bulk-import-panel">
+        <div>
+          <div className="bulk-title">Add multiple items</div>
+          <div className="bulk-subtitle">Download the standard CSV, fill item rows, then import it here.</div>
+        </div>
+        <div className="bulk-actions">
+          <button className="bulk-btn" type="button" onClick={downloadBulkTemplate}>
+            Download template
+          </button>
+          <button className="bulk-btn primary" type="button" disabled={bulkImporting} onClick={() => bulkInputRef.current?.click()}>
+            {bulkImporting ? "Importing..." : "Import file"}
+          </button>
+        </div>
+        {bulkMessage ? <div className="bulk-message">{bulkMessage}</div> : null}
+      </div>
+
       <div className="dp-section ni-section">
         <div className="dp-section-title">Item classification</div>
         <div className="ni-grid two">

@@ -5,9 +5,11 @@ import { NextResponse } from "next/server";
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) throw new Error("DATABASE_URL is not set");
 
-const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any);
+const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as never);
 
 type ImportRow = Record<string, string>;
+type ItemCategoryValue = "OPEX" | "CAPEX";
+type ItemSubCategoryValue = "medicines" | "consumables" | "devices" | "electrical";
 
 const validCategories = new Set(["OPEX", "CAPEX"]);
 const validSubcats = new Set(["medicines", "consumables", "devices", "electrical"]);
@@ -47,6 +49,36 @@ function makeDeptCode(name: string) {
       .toUpperCase()
       .slice(0, 10) || "GEN"
   );
+}
+
+async function nextItemCode(
+  tx: { $queryRawUnsafe: (query: string, ...values: unknown[]) => Promise<unknown> },
+  subcat: string
+) {
+  const prefixes: Record<string, string> = {
+    medicines: "MED",
+    consumables: "CON",
+    devices: "DEV",
+    electrical: "ELE",
+  };
+  const prefix = prefixes[subcat] ?? "ITM";
+  const rows = (await tx.$queryRawUnsafe(
+    `
+      SELECT item_code
+      FROM items
+      WHERE item_code LIKE $1
+      ORDER BY item_id DESC
+      LIMIT 25
+    `,
+    `${prefix}-%`
+  )) as Array<Record<string, unknown>>;
+
+  const nextNumber = rows.reduce((highest, row) => {
+    const match = String(row.item_code ?? "").match(/-(\d+)$/);
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0) + 1;
+
+  return `${prefix}-${String(nextNumber).padStart(3, "0")}`;
 }
 
 export async function POST(req: Request) {
@@ -95,14 +127,14 @@ export async function POST(req: Request) {
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
 
-        const itemCode = clean(row.id || row.item_code || row.itemCode);
+        let itemCode = clean(row.id || row.item_code || row.itemCode);
         const itemName = clean(row.name || row.item_name || row.itemName);
         const category = clean(row.category).toUpperCase();
         const subcat = clean(row.subcat || row.sub_category || row.subCategory).toLowerCase();
         const unit = clean(row.unit) || "nos";
 
-        if (!itemCode || !itemName) {
-          skipped.push({ row: index + 2, reason: "Missing id or name" });
+        if (!itemName) {
+          skipped.push({ row: index + 2, reason: "Missing item name" });
           continue;
         }
 
@@ -116,7 +148,14 @@ export async function POST(req: Request) {
           continue;
         }
 
-        const deptNameOrCode = clean(row.dept) || "GEN";
+        const itemCategory = category as ItemCategoryValue;
+        const itemSubCategory = subcat as ItemSubCategoryValue;
+
+        if (!itemCode) {
+          itemCode = await nextItemCode(tx, itemSubCategory);
+        }
+
+        const deptNameOrCode = clean(row.dept || row.department || row.primary_dept) || "GEN";
         let dept = await tx.department.findFirst({
           where: {
             OR: [{ deptCode: deptNameOrCode }, { deptName: deptNameOrCode }],
@@ -132,7 +171,7 @@ export async function POST(req: Request) {
           });
         }
 
-        const supplierName = clean(row.supplier);
+        const supplierName = clean(row.supplier || row.default_supplier);
         let supplierId: number | null = null;
 
         if (supplierName) {
@@ -152,41 +191,53 @@ export async function POST(req: Request) {
           supplierId = supplier.supplierId;
         }
 
-        const min = toNumber(row.min || row.min_stock_level);
-        const max = toNumber(row.max || row.max_stock_level);
+        const min = toNumber(row.min || row.min_stock || row.min_stock_level);
+        const max = toNumber(row.max || row.max_stock || row.max_stock_level);
         const price = toNumber(row.price || row.price_per_unit);
+        const itemType = clean(row.sub || row.item_type || row.itemType);
+        const description = clean(row.description);
+        const supplierBarcode = clean(row.supplier_barcode || row.supplierBarcode);
 
         const item = await tx.item.upsert({
           where: { itemCode },
           update: {
             itemName,
-            category: category as any,
-            subCategory: subcat as any,
+            category: itemCategory,
+            subCategory: itemSubCategory,
+            itemType: itemType || null,
+            description: description || null,
             unit,
             primaryDeptId: dept.deptId,
             defaultSupplierId: supplierId,
             minStockLevel: min,
             maxStockLevel: max || null,
             pricePerUnit: price || null,
+            supplierBarcode: supplierBarcode || null,
+            hasExpiry: itemCategory === "OPEX",
+            hasAmc: itemCategory === "CAPEX",
+            isActive: true,
           },
           create: {
             itemCode,
             itemName,
-            category: category as any,
-            subCategory: subcat as any,
+            category: itemCategory,
+            subCategory: itemSubCategory,
+            itemType: itemType || null,
+            description: description || null,
             unit,
             primaryDeptId: dept.deptId,
             defaultSupplierId: supplierId,
             minStockLevel: min,
             maxStockLevel: max || null,
             pricePerUnit: price || null,
-            hasExpiry: category === "OPEX",
-            hasAmc: category === "CAPEX",
+            supplierBarcode: supplierBarcode || null,
+            hasExpiry: itemCategory === "OPEX",
+            hasAmc: itemCategory === "CAPEX",
             createdBy: systemUser.userId,
           },
         });
 
-        const stock = toNumber(row.stock || row.quantity || row.qty);
+        const stock = toNumber(row.opening_quantity || row.stock || row.quantity || row.qty);
         const batchNumber = clean(row.batch || row.batchNo || row.batch_number);
 
         if (stock > 0) {
@@ -200,24 +251,30 @@ export async function POST(req: Request) {
           const seq = (await tx.$queryRaw`
             SELECT nextval('grn_entries_grn_id_seq') as grn_id,
                    nextval('item_batches_batch_id_seq') as batch_id
-          `) as any[];
+          `) as Array<{ grn_id: number | string | bigint; batch_id: number | string | bigint }>;
 
           const grnId = Number(seq[0].grn_id);
           const batchId = Number(seq[0].batch_id);
           const grnNumber = `IMP-GRN-${new Date().getFullYear()}-${grnId.toString().padStart(4, "0")}`;
           const finalBatchNumber = batchNumber || `IMPORT-${grnId}`;
+          const expiryDate = toDate(row.expiry || row.expiry_date || row.expiryDate);
+          const mfgDate = toDate(row.mfg_date || row.mfgDate);
+          const invoiceNumber = clean(row.invoice || row.invoice_number || row.invoiceNo) || "IMPORT";
+          const invoiceDate = toDate(row.invoice_date || row.invoiceDate);
+          const storeLocation = clean(row.location || row.store_location || row.storeLocation) || "Imported stock";
+          const serialNumbers = clean(row.serial_numbers || row.serialNumbers);
 
           await tx.$queryRaw`
             INSERT INTO grn_entries (
               grn_id, grn_number, grn_date, item_id, batch_id, supplier_id,
-              quantity_received, unit, batch_number, expiry_date, invoice_number,
-              price_per_unit, total_value, store_location, received_by,
+              quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number,
+              invoice_date, price_per_unit, total_value, store_location, received_by,
               stock_before, stock_after, created_at
             )
             VALUES (
               ${grnId}, ${grnNumber}, CURRENT_DATE, ${item.itemId}, ${batchId}, ${supplierId},
-              ${stock}, ${unit}, ${finalBatchNumber}, ${toDate(row.expiry)},
-              ${"IMPORT"}, ${price || null}, ${price ? price * stock : null}, ${"Imported stock"},
+              ${stock}, ${unit}, ${finalBatchNumber}, ${mfgDate}, ${expiryDate},
+              ${invoiceNumber}, ${invoiceDate}, ${price || null}, ${price ? price * stock : null}, ${storeLocation},
               ${systemUser.userId}, ${stockBefore}, ${stockBefore + stock}, CURRENT_TIMESTAMP
             )
           `;
@@ -225,13 +282,13 @@ export async function POST(req: Request) {
           await tx.$queryRaw`
             INSERT INTO item_batches (
               batch_id, item_id, batch_number, quantity_received, quantity_available,
-              expiry_date, grn_id, supplier_id, purchase_price, storage_location,
-              created_at, updated_at
+              mfg_date, expiry_date, grn_id, supplier_id, purchase_price, storage_location,
+              serial_numbers, created_at, updated_at
             )
             VALUES (
               ${batchId}, ${item.itemId}, ${finalBatchNumber}, ${stock}, ${stock},
-              ${toDate(row.expiry)}, ${grnId}, ${supplierId}, ${price || null},
-              ${"Imported stock"}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              ${mfgDate}, ${expiryDate}, ${grnId}, ${supplierId}, ${price || null},
+              ${storeLocation}, ${serialNumbers || null}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
           `;
         }

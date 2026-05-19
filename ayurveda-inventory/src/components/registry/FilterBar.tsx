@@ -49,8 +49,8 @@ export default function FilterBar({
           />
         </div>
 
-        <button className="btn" onClick={onExport}>Export</button>
-        <button className="btn" onClick={onImport}>Import</button>
+        {onExport ? <button className="btn" onClick={onExport}>Export</button> : null}
+        {onImport ? <button className="btn" onClick={onImport}>Import</button> : null}
 
         <div className="tot-lbl">
           Total: <strong>{totalCount}</strong>
