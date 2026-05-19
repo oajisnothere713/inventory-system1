@@ -434,17 +434,6 @@ export default function AyurVaidyaRegistry() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  const attentionCount = items.filter((item) =>
-    ["expired", "amc_expired", "amc_due", "expiring", "low_stock"].includes(item.status)
-  ).length;
-
-  const registryStats = [
-    { value: items.length, label: "Total Items", tone: "green" },
-    { value: items.filter((item) => item.category === "CAPEX").length, label: "CAPEX Assets", tone: "blue" },
-    { value: items.filter((item) => item.category === "OPEX").length, label: "OPEX Items", tone: "green" },
-    { value: attentionCount, label: "Need Attention", tone: "amber" },
-  ];
-
   return (
     <div className="av-app registry-page">
       <input 
@@ -467,23 +456,12 @@ export default function AyurVaidyaRegistry() {
         {/* Topbar */}
         <div className="registry-head">
           <div>
-            <div className="registry-kicker">Dashboard / <span>Item Registry</span></div>
             <h1>Item Registry</h1>
-            <p>Master catalogue - item definitions, batch stock and asset records</p>
           </div>
           <div className="registry-head-actions">
             <button className="btn" onClick={exportRegistryRows}>Export</button>
             <button className="btn btn-primary" onClick={() => setDetailItem("new")}>+ Add New Item</button>
           </div>
-        </div>
-
-        <div className="registry-stat-grid">
-          {registryStats.map((stat) => (
-            <div className="registry-stat-card" key={stat.label}>
-              <div className={`registry-stat-value ${stat.tone}`}>{stat.value}</div>
-              <div className="registry-stat-label">{stat.label}</div>
-            </div>
-          ))}
         </div>
 
         <FilterBar
