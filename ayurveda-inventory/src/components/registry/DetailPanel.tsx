@@ -5,7 +5,7 @@ import { Batch, Item, batchStatus, stockPct, expiryLabel, stockBarColor } from "
 import StatusPill from "./StatusPill";
 
 type RegistryMeta = {
-  departments: { id: number; label: string }[];
+  departments: { id: number; label: string; code?: string; name?: string }[];
   suppliers: { id: number; label: string }[];
 };
 
@@ -41,7 +41,9 @@ type NewItemForm = {
   maxStockLevel: string;
   reorderQty: string;
   primaryDeptId: string;
+  primaryDeptCode: string;
   defaultSupplierId: string;
+  defaultSupplierName: string;
   supplierBarcode: string;
 };
 
@@ -77,9 +79,14 @@ const initialNewItem: NewItemForm = {
   maxStockLevel: "",
   reorderQty: "",
   primaryDeptId: "",
+  primaryDeptCode: "",
   defaultSupplierId: "",
+  defaultSupplierName: "",
   supplierBarcode: "",
 };
+
+const opexUnits = ["g", "kg", "ml", "L", "strip", "box", "rolls", "pairs"];
+const capexUnits = ["pcs", "nos", "unit", "set"];
 
 const bulkTemplateColumns = [
   "item_code",
@@ -196,8 +203,12 @@ export default function DetailPanel({
         const suppliers = Array.isArray(data.suppliers) ? data.suppliers : [];
         setMeta({ departments, suppliers });
 
-        if (departments[0]?.id) {
-          setNewItem((current) => ({ ...current, primaryDeptId: String(departments[0].id) }));
+        if (departments[0]) {
+          setNewItem((current) => ({
+            ...current,
+            primaryDeptId: departments[0].id ? String(departments[0].id) : "",
+            primaryDeptCode: departments[0].code || "",
+          }));
         }
       })
       .catch(() => {
@@ -227,6 +238,19 @@ export default function DetailPanel({
     setNewItem((current) => ({ ...current, ...patch }));
   };
 
+  const selectedUnits = newItem.unit.split(",").map((unit) => unit.trim()).filter(Boolean);
+
+  const toggleOpexUnit = (unit: string) => {
+    const current = new Set(selectedUnits);
+    if (current.has(unit)) current.delete(unit);
+    else current.add(unit);
+    updateNewItem({ unit: Array.from(current).join(", ") });
+  };
+
+  const selectedDepartment = meta.departments.find(
+    (department) => department.code === newItem.primaryDeptCode || String(department.id) === newItem.primaryDeptId
+  );
+
   const saveNewItem = async () => {
     setSaveError(null);
 
@@ -240,7 +264,7 @@ export default function DetailPanel({
       return;
     }
 
-    if (!newItem.primaryDeptId) {
+    if (!newItem.primaryDeptId && !newItem.primaryDeptCode) {
       setSaveError("Please select a department.");
       return;
     }
@@ -292,8 +316,11 @@ export default function DetailPanel({
           maxStockLevel: newItem.maxStockLevel ? Number(newItem.maxStockLevel) : null,
           reorderQty: newItem.reorderQty ? Number(newItem.reorderQty) : null,
           pricePerUnit: newItem.pricePerUnit ? Number(newItem.pricePerUnit) : null,
-          primaryDeptId: Number(newItem.primaryDeptId),
+          primaryDeptId: newItem.primaryDeptId ? Number(newItem.primaryDeptId) : null,
+          primaryDeptCode: newItem.primaryDeptCode || selectedDepartment?.code || null,
+          primaryDeptName: selectedDepartment?.name || null,
           defaultSupplierId: newItem.defaultSupplierId ? Number(newItem.defaultSupplierId) : null,
+          defaultSupplierName: newItem.defaultSupplierName.trim() || null,
           amcSupplierId: newItem.amcSupplierId ? Number(newItem.amcSupplierId) : null,
           amcValue: newItem.amcValue ? Number(newItem.amcValue) : null,
         }),
@@ -448,6 +475,7 @@ export default function DetailPanel({
                 updateNewItem({
                   category,
                   subCategory: category === "OPEX" ? "medicines" : "devices",
+                  unit: category === "OPEX" ? "g" : "pcs",
                 });
               }}
             >
@@ -483,7 +511,7 @@ export default function DetailPanel({
           />
         </label>
 
-        <div className="ni-grid two">
+        <div className="ni-grid one">
           <label className="ni-field">
             <span>Hindi / Sanskrit name</span>
             <input
@@ -491,19 +519,6 @@ export default function DetailPanel({
               onChange={(event) => updateNewItem({ itemNameHi: event.target.value })}
               placeholder="e.g. Ashwagandha Churna"
             />
-          </label>
-
-          <label className="ni-field">
-            <span>Unit *</span>
-            <select value={newItem.unit} onChange={(event) => updateNewItem({ unit: event.target.value })}>
-              <option value="g">g</option>
-              <option value="kg">kg</option>
-              <option value="ml">ml</option>
-              <option value="L">L</option>
-              <option value="pcs">pcs</option>
-              <option value="box">box</option>
-              <option value="strip">strip</option>
-            </select>
           </label>
         </div>
 
@@ -529,18 +544,41 @@ export default function DetailPanel({
 
       <div className="dp-section ni-section">
         <div className="dp-section-title">Stock levels</div>
-        <label className="ni-field">
-          <span>Opening quantity *</span>
-          <input
-            type="number"
-            min="0"
-            step="0.001"
-            value={newItem.initialQuantity}
-            onChange={(event) => updateNewItem({ initialQuantity: event.target.value })}
-            placeholder="Quantity available now"
-          />
-        </label>
-        <div className="ni-grid three">
+        <div className="ni-grid two">
+          <label className="ni-field">
+            <span>Opening quantity *</span>
+            <input
+              type="number"
+              min="0"
+              step="0.001"
+              value={newItem.initialQuantity}
+              onChange={(event) => updateNewItem({ initialQuantity: event.target.value })}
+              placeholder="Quantity available now"
+            />
+          </label>
+          <label className="ni-field">
+            <span>Unit *</span>
+            {newItem.category === "OPEX" ? (
+              <div className="unit-chip-grid">
+                {opexUnits.map((unit) => (
+                  <button
+                    key={unit}
+                    type="button"
+                    className={`unit-chip${selectedUnits.includes(unit) ? " selected" : ""}`}
+                    onClick={() => toggleOpexUnit(unit)}
+                  >
+                    {unit}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <select value={newItem.unit} onChange={(event) => updateNewItem({ unit: event.target.value })}>
+                {capexUnits.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+              </select>
+            )}
+          </label>
+        </div>
+        <div className="ni-grid three stock-threshold-grid">
           <label className="ni-field">
             <span>Min stock *</span>
             <input
@@ -788,14 +826,25 @@ export default function DetailPanel({
       )}
 
       <div className="dp-section ni-section">
-        <div className="dp-section-title">Default supplier & barcode</div>
-        <div className="ni-grid two">
+        <div className="dp-section-title">Department, default supplier & barcode</div>
+        <div className="ni-grid two supplier-grid">
           <label className="ni-field">
             <span>Department *</span>
-            <select value={newItem.primaryDeptId} onChange={(event) => updateNewItem({ primaryDeptId: event.target.value })}>
-              <option value="">Select department</option>
+            <select
+              value={newItem.primaryDeptCode || newItem.primaryDeptId}
+              onChange={(event) => {
+                const selected = meta.departments.find(
+                  (department) => department.code === event.target.value || String(department.id) === event.target.value
+                );
+                updateNewItem({
+                  primaryDeptId: selected?.id ? String(selected.id) : "",
+                  primaryDeptCode: selected?.code || "",
+                });
+              }}
+            >
+              <option value="">-- Select department --</option>
               {meta.departments.map((department) => (
-                <option key={department.id} value={department.id}>
+                <option key={`${department.code || department.id}-${department.name}`} value={department.code || String(department.id)}>
                   {department.label}
                 </option>
               ))}
@@ -812,6 +861,16 @@ export default function DetailPanel({
                 </option>
               ))}
             </select>
+          </label>
+        </div>
+        <div className="ni-grid two supplier-grid">
+          <label className="ni-field">
+            <span>Add default supplier</span>
+            <input
+              value={newItem.defaultSupplierName}
+              onChange={(event) => updateNewItem({ defaultSupplierName: event.target.value, defaultSupplierId: "" })}
+              placeholder="Type supplier name if not listed"
+            />
           </label>
         </div>
 
@@ -846,10 +905,26 @@ export default function DetailPanel({
 
     return (
       <>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <span className={`cat-badge ${item.category === "CAPEX" ? "cat-capex" : "cat-opex"}`}>{item.category}</span>
-          <span className="subcat-badge">{item.subcat}</span>
-          <StatusPill status={item.status} />
+        <div className="detail-hero">
+          <div>
+            <div className="detail-hero-title">{item.name}</div>
+            <div className="detail-hero-sub">{item.id} · {item.sub || item.subcat}</div>
+            <div className="detail-hero-badges">
+              <span className={`cat-badge ${item.category === "CAPEX" ? "cat-capex" : "cat-opex"}`}>{item.category}</span>
+              <span className="subcat-badge">{item.subcat}</span>
+              <StatusPill status={item.status} />
+            </div>
+          </div>
+          <div className="detail-hero-stats">
+            <div>
+              <strong>{item.stock.toLocaleString()}</strong>
+              <span>{item.unit} stock</span>
+            </div>
+            <div>
+              <strong>{item.min.toLocaleString()}</strong>
+              <span>{item.unit} min</span>
+            </div>
+          </div>
         </div>
 
         <div className="dp-section">
@@ -883,36 +958,27 @@ export default function DetailPanel({
             {item.batches && item.batches.length ? (
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 6 }}>Batches</div>
-                <div style={{ display: "grid", gap: 8 }}>
+                <div className="detail-batch-list">
                   {item.batches.map((batch: Batch, index: number) => {
                     const status = batchStatus(batch, false);
                     const disabled = status === "expired";
 
                     return (
-                      <div
-                        key={`${batch.batch}-${index}`}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          padding: 8,
-                          background: "#fafafa",
-                          borderRadius: 6,
-                        }}
-                      >
-                        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                          <div style={{ fontFamily: "var(--mono)", minWidth: 96 }}>{batch.batch}</div>
-                          <div>{batch.stock} {item.unit}</div>
-                          <div>{batch.mfgDate ? `Mfg ${new Date(batch.mfgDate).toLocaleDateString("en-IN")}` : "Mfg -"}</div>
-                          <div>{batch.expiry ? new Date(batch.expiry).toLocaleDateString("en-IN") : "-"}</div>
-                          <div style={{ color: "var(--text-dim)" }}>{batch.supplier || "-"}</div>
-                          <div style={{ color: "var(--text-dim)" }}>GRN {batch.grn || "-"}</div>
-                          <div style={{ color: "var(--text-dim)" }}>Invoice {batch.invoice || "-"}</div>
-                          <div style={{ color: "var(--text-dim)" }}>{batch.location || "-"}</div>
-                          <div style={{ color: "var(--text-dim)" }}>{status}</div>
+                      <div key={`${batch.batch}-${index}`} className="detail-batch-card">
+                        <div className="detail-batch-main">
+                          <div className="detail-batch-code">{batch.batch}</div>
+                          <div className="detail-batch-meta">
+                            <span>{batch.stock} {item.unit}</span>
+                            <span>{batch.expiry ? new Date(batch.expiry).toLocaleDateString("en-IN") : "No expiry"}</span>
+                            <span>{batch.supplier || "No supplier"}</span>
+                            <span>GRN {batch.grn || "-"}</span>
+                            <span>Invoice {batch.invoice || "-"}</span>
+                            <span>{batch.location || "No location"}</span>
+                            <span>{status}</span>
+                          </div>
                         </div>
 
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div className="detail-batch-actions">
                           <button
                             className="dp-btn"
                             disabled={disabled}
@@ -956,9 +1022,9 @@ export default function DetailPanel({
             <Field label="Quantity" value={`${item.stock} ${item.unit}`} />
 
             {item.batches && item.batches.length ? (
-              <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+              <div className="detail-batch-list">
                 {item.batches.map((batch: Batch, index: number) => (
-                      <div key={`${batch.batch}-${index}`} style={{ padding: 8, background: "#fafafa", borderRadius: 6 }}>
+                  <div key={`${batch.batch}-${index}`} className="detail-batch-card stacked">
                     <Field label="GRN" value={batch.grn || batch.batch || "-"} mono />
                     <Field label="Received" value={batch.grnDate ? new Date(batch.grnDate).toLocaleDateString("en-IN") : "-"} />
                     <Field label="Invoice" value={batch.invoice || "-"} mono />

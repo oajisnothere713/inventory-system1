@@ -12,6 +12,7 @@ export default function ConfirmContent({
   loc,
   patId,
   issueDateFormatted,
+  batchAvailable,
 }: {
   selectedItem: Item | null;
   qty: number;
@@ -22,10 +23,11 @@ export default function ConfirmContent({
   loc: string;
   patId: string;
   issueDateFormatted: string;
+  batchAvailable: number;
 }) {
   if (!selectedItem) return null;
   const confirmNewTotal = selectedItem.totalStock - qty;
-  const confirmBatchLeft = 0; // caller can compute if needed
+  const confirmBatchLeft = batchAvailable - qty;
 
   const itemRows = [
     ['Item name', selectedItem.name],
@@ -45,7 +47,7 @@ export default function ConfirmContent({
     ['Issue date', issueDateFormatted],
   ];
 
-  function rowColor(label: string, value: string): string | undefined {
+  function rowColor(label: string): string | undefined {
     if (label === 'Quantity issued') return 'var(--red)';
     if (label === 'Remaining in batch') return confirmBatchLeft < 0 ? 'var(--red)' : 'var(--green)';
     if (label === 'Total stock after') return confirmNewTotal < selectedItem!.minStock ? 'var(--amber)' : 'var(--green)';
@@ -62,7 +64,7 @@ export default function ConfirmContent({
           {itemRows.map(([lbl, val]) => (
             <div className="confirm-row" key={lbl}>
               <span className="cr-lbl">{lbl}</span>
-              <span className="cr-val" style={{ color: rowColor(lbl as string, val as string) }}>{val}</span>
+              <span className="cr-val" style={{ color: rowColor(lbl as string) }}>{val}</span>
             </div>
           ))}
         </div>
@@ -77,8 +79,8 @@ export default function ConfirmContent({
         </div>
       </div>
 
-      <div className="form-card" style={{ marginTop: 16, borderColor: 'rgba(26,107,60,0.3)', animationDelay: '0.08s' }}>
-        <div className="fc-head" style={{ background: 'var(--green-light)' }}>
+      <div className="form-card confirm-impact-card" style={{ marginTop: 16, animationDelay: '0.08s' }}>
+        <div className="fc-head confirm-impact-head">
           <div className="fc-title" style={{ color: 'var(--green)' }}>What happens when you confirm</div>
         </div>
         <div className="fc-body">

@@ -64,6 +64,39 @@ function parseQrPayload(raw: string) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+const qrSrcFor = (payload: string) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`;
+
+const cleanPayloadValue = (value: unknown) => {
+  const text = String(value ?? "").trim();
+  return text || "-";
+};
+
+const dateMinusDays = (date: string, days: number) => {
+  if (!date) return "";
+  const next = new Date(`${date}T00:00:00`);
+  next.setDate(next.getDate() - days);
+  return next.toISOString().slice(0, 10);
+};
+
+const grnBatchQrPayload = (item: Item, form: FormState, serials: string[]) =>
+  [
+    "AyurVaidya Inventory QR",
+    `Type: ${item.category === "CAPEX" ? "CAPEX procurement batch" : "OPEX batch"}`,
+    `ITEM:${item.id}`,
+    `BATCH:${cleanPayloadValue(form.batchNo)}`,
+    `Item name: ${cleanPayloadValue(item.name)}`,
+    `Category: ${cleanPayloadValue(item.category)}`,
+    `Sub category: ${cleanPayloadValue(item.subcat)}`,
+    `Quantity received: ${cleanPayloadValue(form.qty)} ${cleanPayloadValue(form.unit)}`,
+    `Mfg date: ${form.mfgDate ? fmtDate(form.mfgDate) : "-"}`,
+    `Expiry date: ${form.expiryDate ? fmtDate(form.expiryDate) : "-"}`,
+    `Supplier: ${cleanPayloadValue(form.supplierName)}`,
+    `Invoice: ${cleanPayloadValue(form.invoiceNo)}`,
+    `Storage location: ${cleanPayloadValue(form.storeLocation)}`,
+    `Serials: ${serials.length ? serials.join(", ") : "-"}`,
+  ].join("\n");
+
 export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [activeTab, setActiveTab] = useState<"new" | "history">("new");
@@ -89,7 +122,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
     batchNo: "", qty: "", unit: "ml", mfgDate: "", expiryDate: "",
     expiryType: "date", supplierName: "", invoiceNo: "", invoiceDate: "",
     pricePerUnit: "", storeLocation: "Main pharmacy store",
-    receivedBy: "Ramesh Kumar", notes: "",
+    receivedBy: "", notes: "",
   });
 
   const searchRef = useRef<HTMLDivElement>(null);
@@ -271,6 +304,9 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
     .split(/[\n,]+/)
     .map((serial) => serial.trim())
     .filter(Boolean);
+  const batchQrPayload = selectedItem ? grnBatchQrPayload(selectedItem, form, serialList) : "";
+  const batchQrSrc = batchQrPayload ? qrSrcFor(batchQrPayload) : "";
+  const expiryAlertDate = form.expiryDate ? dateMinusDays(form.expiryDate, 15) : "";
 
   const shelfLife = (() => {
     if (!form.mfgDate || !form.expiryDate) return null;
@@ -418,7 +454,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
       batchNo: "", qty: "", unit: "ml", mfgDate: "", expiryDate: "",
       expiryType: "date", supplierName: "", invoiceNo: "", invoiceDate: "",
       pricePerUnit: "", storeLocation: "Main pharmacy store",
-      receivedBy: "Ramesh Kumar", notes: "",
+      receivedBy: "", notes: "",
     });
     setSerialNumbers("");
     setAmcRequired(false);
@@ -500,7 +536,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
           ["Invoice date", fmtDate(form.invoiceDate), ""],
           ["Price per unit", price ? `₹${price.toLocaleString()}` : "—", ""],
           ["Total value", price && qty ? `₹${(price * qty).toLocaleString()}` : "—", ""],
-          ["Received by", form.receivedBy, ""],
+          ["Received by", form.receivedBy || "—", ""],
         ],
       }
     : { item: [], supplier: [] };
@@ -542,7 +578,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
           label: isCapex ? "AMC tracking updated" : "Expiry tracking begins",
           desc: isCapex
             ? (amcRequired ? `AMC alerts will track expiry on ${fmtDate(amcEndDate)}.` : "No AMC contract will be attached for this asset.")
-            : (form.expiryDate ? `Alert will fire ${daysUntil(form.expiryDate)} days from now (${fmtDate(form.expiryDate)}).` : "No expiry tracked for this batch."),
+            : (form.expiryDate ? `Expiry alert will trigger on ${fmtDate(expiryAlertDate)} - 15 days before ${fmtDate(form.expiryDate)}.` : "No expiry tracked for this batch."),
         },
         {
           label: `QR label${isCapex && qty > 1 ? "s" : ""} ready to print`,
@@ -580,8 +616,8 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
         ...(isCapex && amcRequired && amcEndDate && daysUntil(amcEndDate) < 90
           ? [["AMC alert", `Will trigger in ${daysUntil(amcEndDate)}d`, "amber"] as [string, string, string?]]
           : []),
-        ...(!isCapex && form.expiryDate && daysUntil(form.expiryDate) < 90
-          ? [["Expiry alert", `Will trigger in ${daysUntil(form.expiryDate)}d`, "amber"] as [string, string, string?]]
+        ...(!isCapex && form.expiryDate
+          ? [["Expiry alert", `Triggers ${fmtDate(expiryAlertDate)}`, daysUntil(form.expiryDate) <= 15 ? "amber" : ""] as [string, string, string?]]
           : []),
       ]
     : [];
@@ -1188,9 +1224,12 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                 {selectedItem && (
                   <div className="pp-foot">
                     <div className="qr-preview">
+                      {batchQrSrc && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className="qr-img" src={batchQrSrc} alt={`QR for ${form.batchNo || selectedItem.id}`} />
+                      )}
                       <div className="qr-box">▦</div>
-                      <div className="qr-id">{selectedItem.id}-{form.batchNo || "BATCH"}</div>
-                      <div className="qr-name">{selectedItem.name}</div>
+                      <div className="qr-id">{form.batchNo ? `BATCH:${form.batchNo}` : "Batch QR preview"}</div>
                       <button className="btn-print" onClick={() => alert("Sending QR label to printer…")}>Print QR sticker</button>
                     </div>
                   </div>
@@ -1453,6 +1492,8 @@ width:100%;}
 
 /* QR preview */
 .qr-preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;text-align:center;margin-bottom:12px}
+.qr-preview .qr-box,.qr-preview .btn-print{display:none}
+.qr-img{width:132px;height:132px;border-radius:8px;border:1px solid var(--border);background:#fff;margin:0 auto 10px;display:block}
 .qr-box{width:80px;height:80px;background:var(--bg);border:2px dashed var(--border-2);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 10px}
 .qr-id{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px}
 .qr-name{font-size:11px;color:var(--text-dim);margin-bottom:8px}
