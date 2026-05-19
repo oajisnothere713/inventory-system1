@@ -9,9 +9,10 @@ type Props = {
   expiring?: ExpiringBatch[]
   lowStock?: LowStockItem[]
   amcDue?: AmcItem[]
+  expiredCount?: number
 }
 
-export default function AttentionCard({ activeAlerts = 0, expiring = [], lowStock = [], amcDue = [] }: Props) {
+export default function AttentionCard({ activeAlerts = 0, expiring = [], lowStock = [], amcDue = [], expiredCount = 0 }: Props) {
   return (
     <div className="attention-card">
       <div className="attention-head">
@@ -53,7 +54,7 @@ export default function AttentionCard({ activeAlerts = 0, expiring = [], lowStoc
         </div>
 
         <div className="attn-col danger-bg">
-          <div className="attn-big" style={{ color: 'var(--red)' }}>{/* expired placeholder */}0</div>
+          <div className="attn-big" style={{ color: 'var(--red)' }}>{expiredCount}</div>
           <div className="attn-lbl">Already expired — dispose now</div>
           <div className="danger-notice">Dispose per AYUSH guidelines immediately. Log disposal in system.</div>
         </div>

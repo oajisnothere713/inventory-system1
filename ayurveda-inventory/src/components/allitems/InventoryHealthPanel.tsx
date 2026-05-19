@@ -4,12 +4,18 @@ type Props = {
   totalItems?: number
   capexCount?: number
   opexCount?: number
+  attentionCount?: number
+  expiredCount?: number
 }
 
-export default function InventoryHealthPanel({ totalItems = 0, capexCount = 0, opexCount = 0 }: Props) {
-  const healthy = Math.round((totalItems || 0) * 0.7)
-  const needAttention = Math.max(0, (totalItems || 0) - healthy - 2)
-  const expired = 2
+export default function InventoryHealthPanel({ totalItems = 0, capexCount = 0, opexCount = 0, attentionCount = 0, expiredCount = 0 }: Props) {
+  const healthy = Math.max((totalItems || 0) - Math.max(attentionCount, expiredCount), 0)
+  const needAttention = Math.max(attentionCount, 0)
+  const expired = Math.max(expiredCount, 0)
+  const totalForBars = Math.max(totalItems || 0, 1)
+  const healthyPct = Math.max(0, Math.min(100, Math.round((healthy / totalForBars) * 100)))
+  const attentionPct = Math.max(0, Math.min(100 - healthyPct, Math.round((needAttention / totalForBars) * 100)))
+  const expiredPct = Math.max(0, 100 - healthyPct - attentionPct)
 
   return (
     <div className="panel">
@@ -26,9 +32,9 @@ export default function InventoryHealthPanel({ totalItems = 0, capexCount = 0, o
             <span className="health-status" style={{ color: 'var(--green)' }}>Good overall</span>
           </div>
           <div className="health-bar">
-            <div className="hb" style={{ width: '70%', background: 'var(--green)' }}></div>
-            <div className="hb" style={{ width: '26%', background: 'var(--amber)' }}></div>
-            <div className="hb" style={{ width: '4%', background: 'var(--red)' }}></div>
+            <div className="hb" style={{ width: `${healthyPct}%`, background: 'var(--green)' }}></div>
+            <div className="hb" style={{ width: `${attentionPct}%`, background: 'var(--amber)' }}></div>
+            <div className="hb" style={{ width: `${expiredPct}%`, background: 'var(--red)' }}></div>
           </div>
         </div>
 
@@ -38,10 +44,9 @@ export default function InventoryHealthPanel({ totalItems = 0, capexCount = 0, o
             <span className="health-status" style={{ color: 'var(--amber)' }}>Attention needed</span>
           </div>
           <div className="health-bar">
-            <div className="hb" style={{ width: '75%', background: 'var(--green)' }}></div>
-            <div className="hb" style={{ width: '7%', background: 'var(--amber)' }}></div>
-            <div className="hb" style={{ width: '13%', background: 'rgba(185,28,28,0.6)' }}></div>
-            <div className="hb" style={{ width: '5%', background: 'var(--red)' }}></div>
+            <div className="hb" style={{ width: `${healthyPct}%`, background: 'var(--green)' }}></div>
+            <div className="hb" style={{ width: `${attentionPct}%`, background: 'var(--amber)' }}></div>
+            <div className="hb" style={{ width: `${expiredPct}%`, background: 'var(--red)' }}></div>
           </div>
         </div>
 

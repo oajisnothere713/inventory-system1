@@ -7,6 +7,7 @@ import ExpiryPipelineCard from "./opex/ExpiryPipelineCard";
 import LowStockCard from "./opex/LowStockCard";
 import AnomalyTrackerCard from "./opex/AnomalyTrackerCard";
 import WastageCard from "./opex/WastageCard";
+import RecentAdditionsCard from "./opex/RecentAdditionsCard";
 import { useEffect, useState } from 'react';
 
 type OpexItem = {
@@ -62,6 +63,17 @@ export default function OpexDashboard(){
   const total = items.length
   const medicines = items.filter(i => i.subcat === 'medicines').length
   const consumables = items.filter(i => i.subcat === 'consumables').length
+  const expiring30Days = items.filter(i => {
+    if (!now || !i.expiry) return false
+    const diff = Math.round((new Date(i.expiry).getTime() - now) / (1000 * 60 * 60 * 24))
+    return diff >= 0 && diff <= 30
+  }).length
+  const lowStock = items.filter(i => i.stock <= i.min).length
+  const addedThisMonth = items.filter(i => i.createdAt && new Date(i.createdAt).getMonth() === new Date().getMonth() && new Date(i.createdAt).getFullYear() === new Date().getFullYear()).length
+  const recentItems = items
+    .filter((item) => item.createdAt)
+    .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())
+    .slice(0, 5)
 
   // expiry buckets based on earliest expiry date
   const days = (d?: string | null) => {
@@ -92,7 +104,8 @@ export default function OpexDashboard(){
 
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', marginBottom: 12 }}>
         <DonutKpiCard total={total} medicines={medicines} consumables={consumables} />
-        <KPICards />
+        <KPICards total={total} expiring30Days={expiring30Days} lowStock={lowStock} />
+        <RecentAdditionsCard items={recentItems} addedThisMonth={addedThisMonth} medicines={medicines} consumables={consumables} />
       </div>
 
       <div className="grid g-2" style={{ marginBottom: 12 }}>
