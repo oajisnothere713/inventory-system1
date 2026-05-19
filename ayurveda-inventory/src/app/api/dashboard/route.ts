@@ -14,7 +14,7 @@ export async function GET() {
     // Run core queries in parallel instead of a DB transaction. Some serverless
     // Postgres providers (eg. Neon) limit transaction start time which can fail
     // for short-lived connections — use Promise.all to avoid P2028.
-    const [totalItems, capexCount, opexCount, activeAlerts, grnThisMonth, recentGrns] = await Promise.all([
+    const [totalItems, capexCount, opexCount, activeAlerts, grnThisMonth, recentGrns, expiredCount] = await Promise.all([
       prisma.item.count(),
       prisma.item.count({ where: { category: 'CAPEX' } }),
       prisma.item.count({ where: { category: 'OPEX' } }),
@@ -22,6 +22,7 @@ export async function GET() {
       prisma.grnEntry.count({ where: { grnDate: { gte: firstDayOfMonth } } }),
       // limit fields returned for recent GRNs to reduce payload
       prisma.grnEntry.findMany({ orderBy: { grnDate: 'desc' }, take: 5, include: { item: { select: { itemId: true, itemName: true } } } }),
+      prisma.itemBatch.count({ where: { expiryDate: { lt: new Date() }, quantityAvailable: { gt: 0 } } }),
     ])
 
     // attention lists
@@ -73,7 +74,7 @@ export async function GET() {
     const serLow = lowStock.map((x: any) => ({ itemId: x.itemId, itemName: x.itemName, totalAvailable: x.totalAvailable }))
     const serAmc = amcDue.map((a: any) => ({ amcId: a.amcId, amcNumber: a.amcNumber, contractEnd: a.contractEnd?.toISOString?.(), item: { itemId: a.item?.itemId, itemName: a.item?.itemName } }))
 
-    return NextResponse.json({ totalItems, capexCount, opexCount, activeAlerts, grnThisMonth, recentGrns: serialized, expiring: serExp, lowStock: serLow, amcDue: serAmc })
+    return NextResponse.json({ totalItems, capexCount, opexCount, activeAlerts, grnThisMonth, expiredCount, recentGrns: serialized, expiring: serExp, lowStock: serLow, amcDue: serAmc })
   } catch (err: any) {
     // surface the error to server logs for debugging and return message in dev
     console.error('GET /api/dashboard error:', err)

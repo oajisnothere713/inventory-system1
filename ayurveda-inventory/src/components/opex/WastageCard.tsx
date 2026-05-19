@@ -6,15 +6,24 @@ export default function WastageCard(){
   const [rows, setRows] = useState<string[][] | null>(null)
   const [totalQty, setTotalQty] = useState<number>(0)
   const [totalValue, setTotalValue] = useState<number>(0)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().slice(0, 7))
+
+  const monthTabs = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date()
+    date.setMonth(date.getMonth() - index)
+    const value = date.toISOString().slice(0, 7)
+    const label = date.toLocaleString('en-IN', { month: 'short', year: 'numeric' })
+    return { value, label }
+  }).reverse()
 
   useEffect(()=>{
     let mounted = true
-    fetch('/api/opex/wastage')
+    fetch(`/api/opex/wastage?month=${selectedMonth}`)
       .then(r=> r.ok ? r.json() : Promise.reject(r))
       .then((data)=>{ if(!mounted) return; setTotalQty(data.totalQty || 0); setTotalValue(data.totalValue || 0); setRows(Array.isArray(data.rows) ? data.rows : []) })
       .catch(()=>{ if(!mounted) return; setRows([]); setTotalQty(0); setTotalValue(0) })
     return ()=>{ mounted=false }
-  },[])
+  },[selectedMonth])
 
   const displayRows = rows ?? [
     ['Haritaki Churna','1.6 kg','₹1,920',85],
@@ -31,16 +40,22 @@ export default function WastageCard(){
         <a className="view-link">View report →</a>
       </div>
       <div className="card-body" style={{ padding: '12px 14px' }}>
-        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 8 }}>Items expired before use — this month</div>
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 8 }}>Items expired before use — selected month</div>
         <div className="sum-pills">
           <div className="s-pill"><div className="s-pill-val">{totalQty}</div><div className="s-pill-lbl">items expired</div></div>
           <div className="s-pill"><div className="s-pill-val">₹{Math.round(totalValue)}</div><div className="s-pill-lbl">value written off</div></div>
         </div>
         <div className="month-tabs">
-          <div className="mtab">Jan</div>
-          <div className="mtab">Feb</div>
-          <div className="mtab active">Mar</div>
-          <div className="mtab">Apr</div>
+          {monthTabs.map((month) => (
+            <button
+              key={month.value}
+              type="button"
+              className={`mtab${selectedMonth === month.value ? ' active' : ''}`}
+              onClick={() => setSelectedMonth(month.value)}
+            >
+              {month.label}
+            </button>
+          ))}
         </div>
         <div className="wastage-list">
           {displayRows.map((r,i)=> (

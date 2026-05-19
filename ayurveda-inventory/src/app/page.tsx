@@ -12,10 +12,18 @@ const AyurVaidyaStockIssue = dynamic(() => import("../components/AyurVaidyaStock
 
 type ActiveTab = "ALL" | "CAPEX" | "OPEX" | "REG" | "GRN" | "ISS";
 
+type DashboardSummary = {
+  capexCount?: number;
+  opexCount?: number;
+  activeAlerts?: number;
+  amcDue?: unknown[];
+};
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("ALL");
   const [grnView, setGrnView] = useState<"grn" | "qr">("grn");
   const [today, setToday] = useState(() => new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }));
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
 
   const breadcrumbLabel = activeTab === "GRN"
     ? "Stock Inward (GRN)"
@@ -27,13 +35,29 @@ export default function Home() {
     ? "CAPEX assets"
     : activeTab === "REG"
     ? "Item Registry"
-    : "All items";
+    : "Overview";
 
   useEffect(() => {
     const id = setInterval(() => {
       setToday(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }));
     }, 60 * 1000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/dashboard")
+      .then((response) => (response.ok ? response.json() : Promise.reject(response)))
+      .then((data: DashboardSummary) => {
+        if (mounted) setSummary(data);
+      })
+      .catch(() => {
+        if (mounted) setSummary(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -91,7 +115,7 @@ export default function Home() {
 
           <div className="nav-block">
             <div className="nav-label">Insights</div>
-            <div className="nav-item"><div className="nav-icon">!</div> Alerts <span className="nav-chip">22</span></div>
+            <div className="nav-item"><div className="nav-icon">!</div> Alerts <span className="nav-chip">{summary?.activeAlerts ?? 0}</span></div>
             <div className="nav-item"><div className="nav-icon">=</div> Reports</div>
             <div className="nav-item"><div className="nav-icon">*</div> AI Assistant</div>
           </div>
@@ -100,9 +124,9 @@ export default function Home() {
             <div className="nav-label">Category</div>
             <div className="nav-item" style={{ color: "rgba(255,255,255,0.9)" }}>
               <div className="nav-icon" style={{ color: "#93c5fd" }}>C</div> CAPEX items
-              <span className="nav-chip amber">3 AMC</span>
+              <span className="nav-chip amber">{summary?.amcDue?.length ?? 0} AMC</span>
             </div>
-            <div className="nav-item"><div className="nav-icon" style={{ color: "#86efac" }}>O</div> OPEX items <span className="nav-chip">7</span></div>
+            <div className="nav-item"><div className="nav-icon" style={{ color: "#86efac" }}>O</div> OPEX items <span className="nav-chip">{summary?.opexCount ?? 0}</span></div>
           </div>
         </nav>
 
@@ -124,6 +148,11 @@ export default function Home() {
           <div className="topbar-right">
             <div className="status-pill"><div className="status-dot"></div> System online</div>
             <div className="date-chip">{today}</div>
+            <div className="icon-btn" aria-label="Notifications">
+              🔔
+              <div className="notif-badge">{summary?.activeAlerts ?? 0}</div>
+            </div>
+            <div className="icon-btn" aria-label="Settings">⚙</div>
           </div>
         </header>
 
