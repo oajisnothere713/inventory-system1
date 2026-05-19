@@ -164,6 +164,7 @@ export default function RegistryTable({
           <col className="name" />
           <col className="cat" />
           <col className="stock" />
+          <col className="units" />
           <col className="exp" />
           <col className="dept" />
           <col className="act" />
@@ -175,6 +176,7 @@ export default function RegistryTable({
             <th>Item name</th>
             <th>Category</th>
             <th>Stock</th>
+            <th>Batches / Units</th>
             <th>Expiry date / AMC due</th>
             <th>Dept</th>
             <th>Actions</th>
@@ -217,26 +219,26 @@ export default function RegistryTable({
                     {isCapex ? (
                       <div>
                         <span className="sval">{total} {item.unit}</span>
-                        <div className="batch-count">{batches.length} procurement{batches.length !== 1 ? "s" : ""}</div>
                       </div>
                     ) : (
                       <div>
                         <div className="sval">{total.toLocaleString()} {item.unit}</div>
                         <div className="sbar"><div className="sbf" style={{ width: `${pct}%`, background: stockBarColor(item) }} /></div>
-                        <div className="spct">
-                          {pct}% of min
-                          {batches.length ? (
-                            <>
-                              {" - "}
-                              <button className="batch-link" type="button" onClick={(event) => { event.stopPropagation(); toggle(item.id); }}>
-                                {batches.length} batch{batches.length !== 1 ? "es" : ""}
-                                {alertBatches.length ? ` - ${alertBatches.length} need attention` : ""}
-                              </button>
-                            </>
-                          ) : " - 0 batches"}
-                        </div>
                       </div>
                     )}
+                  </td>
+                  <td>
+                    <button
+                      className={`batch-link batch-summary-link${alertBatches.length ? " attention" : ""}`}
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); toggle(item.id); }}
+                    >
+                      {isCapex ? (
+                        `${batches.length} procurement${batches.length !== 1 ? "s" : ""}`
+                      ) : (
+                        `${pct}% of min - ${batches.length} batch${batches.length !== 1 ? "es" : ""}${alertBatches.length ? ` - ${alertBatches.length} need attention` : ""}`
+                      )}
+                    </button>
                   </td>
                   <td>
                     <div className={`exp-main ${summary.cls}`}>{summary.main}</div>
@@ -258,7 +260,7 @@ export default function RegistryTable({
                 {isExpanded ? (
                   <>
                     <tr className="b-hdr">
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className="b-hdr-in">
                           <span className="bc-tog" />
                           <span className="bc-code">{isCapex ? "GRN ref" : "Batch no."}</span>
@@ -281,7 +283,7 @@ export default function RegistryTable({
 
                       return (
                         <tr key={`${item.id}-${batch.batch}-${batchIndex}`} className={`b-row${batchIndex === batches.length - 1 ? " last" : ""}`}>
-                          <td colSpan={8}>
+                          <td colSpan={9}>
                             <div className="b-row-in">
                               <span className="bc-tog" />
                               <span className="bc-code"><span className="bnum">{isCapex ? batch.grn || batch.batch : batch.batch}</span></span>
@@ -327,7 +329,7 @@ export default function RegistryTable({
                     })}
 
                     <tr className="b-foot">
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className="b-foot-in">
                         </div>
                       </td>

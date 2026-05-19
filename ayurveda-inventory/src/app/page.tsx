@@ -124,14 +124,6 @@ export default function Home() {
           <div className="topbar-right">
             <div className="status-pill"><div className="status-dot"></div> System online</div>
             <div className="date-chip">{today}</div>
-            {activeTab === "REG" ? (
-              <button
-                className="btn btn-primary"
-                onClick={() => window.dispatchEvent(new CustomEvent("open-new-registry-item"))}
-              >
-                + Add new item
-              </button>
-            ) : null}
           </div>
         </header>
 
