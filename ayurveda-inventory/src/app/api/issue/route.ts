@@ -9,7 +9,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any)
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { itemCode, batchNo, qty, deptCode, authorisedBy, issuedBy, purpose, specificLocation, notes } = body
+    const { itemCode, batchNo, qty, deptCode, authorisedBy, issuedBy, purpose, specificLocation, patientId, issueDate, notes } = body
     const quantity = Number(qty || 0)
     if (!itemCode || !quantity || quantity <= 0) return NextResponse.json({ error: 'invalid payload' }, { status: 400 })
 
@@ -45,9 +45,23 @@ export async function POST(req: Request) {
 
       // resolve users (authorisedBy / issuedBy) by full name fallback to first user
       let authId = null
-      if (authorisedBy) {
-        const u = await tx.user.findFirst({ where: { fullName: authorisedBy } })
-        authId = u ? u.userId : (await tx.user.findFirst())?.userId ?? 1
+      if (authorisedBy && String(authorisedBy).trim()) {
+        const authName = String(authorisedBy).trim()
+        let u = await tx.user.findFirst({ where: { fullName: authName } })
+        if (!u) {
+          const slug = authName.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 18) || 'authoriser'
+          u = await tx.user.create({
+            data: {
+              employeeId: `AUTH-${Date.now().toString().slice(-8)}`,
+              fullName: authName,
+              username: `auth_${slug}_${Date.now().toString().slice(-4)}`.slice(0, 50),
+              passwordHash: 'stock-issue-authoriser',
+              role: 'doctor',
+              deptId,
+            },
+          })
+        }
+        authId = u.userId
       }
       let issuedId = null
       if (issuedBy) {
@@ -81,6 +95,7 @@ export async function POST(req: Request) {
       const created = await tx.stockIssue.create({ data: {
         issueId: issueId,
         issueNumber: issueNumber,
+        issueDate: issueDate ? new Date(issueDate) : new Date(),
         itemId: it.itemId,
         batchId: batch.batchId,
         deptId: deptId as number,
@@ -90,6 +105,7 @@ export async function POST(req: Request) {
         authorisedBy: authId ?? 1,
         issuedBy: issuedId ?? 1,
         purpose: purposeEnum as any,
+        patientId: patientId || null,
         stockBefore: stockBefore,
         stockAfter: stockAfter,
         batchQtyBefore: batchQtyBefore,

@@ -80,7 +80,7 @@ export function batchStatus(batch: Batch, isCapex: boolean) {
   if (!batch.expiry) return "no_expiry";
   const days = daysUntil(batch.expiry);
   if (days !== null && days < 0) return "expired";
-  if (days !== null && days < 60) return "expiring";
+  if (days !== null && days <= 15) return "expiring";
   return "healthy";
 }
 
@@ -153,8 +153,7 @@ export function expiryLabel(item: Item): { txt: string; cls: string } {
   const now = new Date();
   const days = Math.round((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (days < 0) return { txt: "Expired", cls: "expiry-red" };
-  if (days < 30) return { txt: `${days} days`, cls: "expiry-red" };
-  if (days < 60) return { txt: `${days} days`, cls: "expiry-amber" };
+  if (days <= 15) return { txt: `${days} days`, cls: days <= 7 ? "expiry-red" : "expiry-amber" };
   return { txt: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }), cls: "expiry-green" };
 }
 

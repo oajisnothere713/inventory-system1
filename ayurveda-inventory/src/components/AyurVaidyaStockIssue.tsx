@@ -53,6 +53,8 @@ const DEPTS: Dept[] = [
   { name: "Swastha Vritta", code: "SWA" },     { name: "Research", code: "RES" },
 ];
 
+const todayInputValue = () => new Date().toISOString().slice(0, 10);
+
 // Issue history will be fetched from the server when the history tab is opened
 
 /* ── HELPERS ─────────────────────────────────────────────── */
@@ -325,8 +327,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text)}
 .confirm-row:last-child{border-bottom:none}
 .cr-lbl{color:var(--text-dim)}
 .cr-val{color:var(--text);font-weight:500;text-align:right}
+.confirm-impact-card{border-color:rgba(26,107,60,0.35)!important;box-shadow:0 8px 24px rgba(26,107,60,0.08)}
+.confirm-impact-head{background:#e7f4ec!important;border-bottom-color:rgba(26,107,60,0.18)}
 .consequence-list{display:flex;flex-direction:column;gap:10px}
-.consequence-item{display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+.consequence-item{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;padding:8px 10px;border-radius:10px;background:#fbfdfb;border:1px solid rgba(26,107,60,0.08)}
 .cons-num{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
 .cons-num.warn{background:var(--amber)}
 
@@ -372,7 +376,7 @@ export default function AyurVaidyaStockIssue({ embedded = true }: { embedded?: b
   const [purpose, setPurpose] = useState("");
   const [patientId, setPatientId] = useState("");
   const [specificLocation, setSpecificLocation] = useState("");
-  const [issueDate, setIssueDate] = useState("2025-04-21");
+  const [issueDate, setIssueDate] = useState(todayInputValue);
   const [notes, setNotes] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [remoteResults, setRemoteResults] = useState<Item[]>([]);
@@ -501,6 +505,8 @@ export default function AyurVaidyaStockIssue({ embedded = true }: { embedded?: b
       authorisedBy: authorisedBy || null,
       issuedBy: '',
       purpose: purpose || null,
+      issueDate: issueDate || todayInputValue(),
+      patientId: patientId || null,
       specificLocation: specificLocation || null,
       notes: notes || null,
     }
@@ -533,7 +539,7 @@ export default function AyurVaidyaStockIssue({ embedded = true }: { embedded?: b
     setPurpose("");
     setPatientId("");
     setSpecificLocation("");
-    setIssueDate("2025-04-21");
+    setIssueDate(todayInputValue());
     setNotes("");
     setSuccessMsg("");
     setCurrentStep(1);
@@ -983,6 +989,7 @@ export default function AyurVaidyaStockIssue({ embedded = true }: { embedded?: b
                             loc={specificLocation || "—"}
                             patId={patientId || "—"}
                             issueDateFormatted={fmtDate(issueDate)}
+                            batchAvailable={selectedBatch?.qty ?? 0}
                           />
                         </div>
                       </div>

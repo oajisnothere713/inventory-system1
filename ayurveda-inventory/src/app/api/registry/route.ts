@@ -8,6 +8,13 @@ if (!dbUrl) throw new Error('DATABASE_URL is not set')
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any)
 
+const deptCategoryFor = (code: string): 'clinical' | 'admin' | 'lab' | 'pharmacy' | 'other' => {
+  if (code === 'PHM') return 'pharmacy'
+  if (code === 'LAB') return 'lab'
+  if (['OPD-GEN', 'IPD-A', 'IPD-B', 'PKM', 'SHA', 'KAU', 'STR', 'SHY', 'SWA'].includes(code)) return 'clinical'
+  return 'other'
+}
+
 export async function GET() {
   try {
     // Safer approach: fetch items and batches in two queries and merge in JS.
@@ -154,10 +161,13 @@ export async function POST(req: Request) {
     const category = body.category === 'CAPEX' ? 'CAPEX' : 'OPEX'
     const allowedSubcats = category === 'CAPEX' ? ['devices', 'electrical'] : ['medicines', 'consumables']
     const subCategory = allowedSubcats.includes(String(body.subCategory)) ? String(body.subCategory) : allowedSubcats[0]
-    const primaryDeptId = Number(body.primaryDeptId)
-    const defaultSupplierId = body.defaultSupplierId === null || body.defaultSupplierId === '' || body.defaultSupplierId === undefined
+    const primaryDeptCode = String(body.primaryDeptCode ?? '').trim()
+    const primaryDeptName = String(body.primaryDeptName ?? '').trim()
+    let primaryDeptId = Number(body.primaryDeptId)
+    let defaultSupplierId = body.defaultSupplierId === null || body.defaultSupplierId === '' || body.defaultSupplierId === undefined
       ? null
       : Number(body.defaultSupplierId)
+    const defaultSupplierName = String(body.defaultSupplierName ?? '').trim()
 
     if (!itemName) {
       return NextResponse.json({ error: 'Item name is required' }, { status: 400 })
@@ -167,7 +177,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unit is required' }, { status: 400 })
     }
 
-    if (!Number.isFinite(primaryDeptId)) {
+    if (!Number.isFinite(primaryDeptId) || primaryDeptId <= 0) {
+      const deptCodeOrName = primaryDeptCode || primaryDeptName
+      if (deptCodeOrName) {
+        const existingDept = await prisma.department.findFirst({
+          where: {
+            OR: [
+              { deptCode: primaryDeptCode || deptCodeOrName },
+              { deptName: primaryDeptName || deptCodeOrName },
+            ],
+          },
+        })
+
+        if (existingDept) {
+          primaryDeptId = existingDept.deptId
+        } else {
+          const deptCode = (primaryDeptCode || deptCodeOrName.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10) || 'DEPT').slice(0, 10)
+          const createdDept = await prisma.department.create({
+            data: {
+              deptCode,
+              deptName: primaryDeptName || primaryDeptCode || deptCode,
+              category: deptCategoryFor(deptCode),
+            },
+          })
+          primaryDeptId = createdDept.deptId
+        }
+      }
+    }
+
+    if (!Number.isFinite(primaryDeptId) || primaryDeptId <= 0) {
       return NextResponse.json({ error: 'Department is required' }, { status: 400 })
     }
 
@@ -186,6 +224,22 @@ export async function POST(req: Request) {
     const createdBy = Number(creatorRows[0]?.user_id)
     if (!Number.isFinite(createdBy)) {
       return NextResponse.json({ error: 'No active user found to create the item' }, { status: 400 })
+    }
+
+    if (!defaultSupplierId && defaultSupplierName) {
+      const existingSupplier = await prisma.supplier.findFirst({ where: { supplierName: defaultSupplierName } })
+      if (existingSupplier) {
+        defaultSupplierId = existingSupplier.supplierId
+      } else {
+        const supplierCode = defaultSupplierName.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 8) || 'SUP'
+        const createdSupplier = await prisma.supplier.create({
+          data: {
+            supplierCode: `${supplierCode}${Date.now().toString().slice(-2)}`.slice(0, 10),
+            supplierName: defaultSupplierName,
+          },
+        })
+        defaultSupplierId = createdSupplier.supplierId
+      }
     }
 
     const prefixes: Record<string, string> = {
