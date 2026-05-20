@@ -148,6 +148,210 @@ export function stockBarColor(item: Item): string {
   return "var(--green)";
 }
 
+export type ExpiryColumnSummary = {
+  main: string;
+  sub: string;
+  cls: "ec-red" | "ec-amber" | "ec-green" | "ec-none" | "ec-blue";
+  icon: string;
+};
+
+function fmtRegistryDate(date?: string | null) {
+  if (!date) return null;
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function batchLabel(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? "" : "es"}`;
+}
+
+function joinSummaryParts(parts: string[]) {
+  return parts.filter(Boolean).join(" · ");
+}
+
+function sortByDateAsc<T extends { expiry?: string | null; amcExpiry?: string | null }>(
+  batches: T[],
+  field: "expiry" | "amcExpiry"
+) {
+  return [...batches].sort((a, b) => String(a[field] ?? "").localeCompare(String(b[field] ?? "")));
+}
+
+/** Registry table: batch-level expiry / AMC summary for the Expiry date / AMC due column. */
+export function expiryColumnSummary(item: Item): ExpiryColumnSummary {
+  const isCapex = item.category === "CAPEX";
+  const batches = item.batches ?? [];
+  const total = batches.length;
+
+  if (!total) {
+    return {
+      main: "No batches",
+      sub: "Add a GRN to register stock",
+      cls: "ec-none",
+      icon: "·",
+    };
+  }
+
+  if (isCapex) {
+    let noAmc = 0;
+    let expired = 0;
+    let due = 0;
+    let active = 0;
+    const dueBatches: Batch[] = [];
+
+    for (const batch of batches) {
+      const status = batchStatus(batch, true);
+      if (status === "no_amc") noAmc++;
+      else if (status === "amc_expired") {
+        expired++;
+      } else if (status === "amc_due") {
+        due++;
+        dueBatches.push(batch);
+      } else active++;
+    }
+
+    const withAmc = total - noAmc;
+
+    if (!withAmc) {
+      return {
+        main: "No AMC on file",
+        sub: `${batchLabel(total, "batch")} — link AMC on GRN`,
+        cls: "ec-none",
+        icon: "·",
+      };
+    }
+
+    if (expired) {
+      const soonestDue = sortByDateAsc(dueBatches, "amcExpiry")[0];
+      const dueDays = soonestDue ? daysUntil(soonestDue.amcExpiry) : null;
+      return {
+        main: `${expired}/${total} ${total === 1 ? "batch" : "batches"} AMC expired`,
+        sub: joinSummaryParts([
+          due ? `${due} AMC due soon` : "",
+          active ? `${active} AMC active` : "",
+          noAmc ? `${noAmc} without AMC` : "",
+          soonestDue && dueDays !== null
+            ? `Next due: ${fmtRegistryDate(soonestDue.amcExpiry)} (${dueDays}d)`
+            : "",
+        ]),
+        cls: expired === total ? "ec-red" : "ec-amber",
+        icon: "⛔",
+      };
+    }
+
+    if (due) {
+      const soonest = sortByDateAsc(dueBatches, "amcExpiry")[0];
+      const days = soonest ? daysUntil(soonest.amcExpiry) : null;
+      return {
+        main: `${due}/${total} ${total === 1 ? "batch" : "batches"} AMC due`,
+        sub: joinSummaryParts([
+          active ? `${active} AMC active` : "",
+          noAmc ? `${noAmc} without AMC` : "",
+          soonest && days !== null
+            ? `Soonest: ${fmtRegistryDate(soonest.amcExpiry)} (${days}d)`
+            : "",
+        ]),
+        cls: days !== null && days < 30 ? "ec-red" : "ec-amber",
+        icon: "⏰",
+      };
+    }
+
+    const next = sortByDateAsc(
+      batches.filter((batch) => batch.amcExpiry),
+      "amcExpiry"
+    )[0];
+    return {
+      main: `${active}/${total} ${total === 1 ? "batch" : "batches"} AMC active`,
+      sub: joinSummaryParts([
+        noAmc ? `${noAmc} without AMC` : "",
+        next ? `Renew by ${fmtRegistryDate(next.amcExpiry)}` : "",
+      ]),
+      cls: "ec-green",
+      icon: "✓",
+    };
+  }
+
+  let noExpiry = 0;
+  let expired = 0;
+  let expiring = 0;
+  let healthy = 0;
+  const expiringBatches: Batch[] = [];
+  const healthyBatches: Batch[] = [];
+
+  for (const batch of batches) {
+    const status = batchStatus(batch, false);
+    if (status === "no_expiry") noExpiry++;
+    else if (status === "expired") expired++;
+    else if (status === "expiring") {
+      expiring++;
+      expiringBatches.push(batch);
+    } else {
+      healthy++;
+      if (batch.expiry) healthyBatches.push(batch);
+    }
+  }
+
+  const tracked = total - noExpiry;
+
+  if (!tracked) {
+    return {
+      main: "No expiry",
+      sub: `${batchLabel(noExpiry, "batch")} — no expiry dates`,
+      cls: "ec-none",
+      icon: "·",
+    };
+  }
+
+  const soonest = sortByDateAsc(
+    [...expiringBatches, ...healthyBatches],
+    "expiry"
+  )[0];
+  const soonestDays = soonest ? daysUntil(soonest.expiry) : null;
+
+  if (expired) {
+    return {
+      main: `${expired}/${total} ${total === 1 ? "batch" : "batches"} expired`,
+      sub: joinSummaryParts([
+        expiring ? `${expiring} expiring soon` : "",
+        healthy ? `${healthy} healthy` : "",
+        noExpiry ? `${noExpiry} no expiry` : "",
+        soonest && soonestDays !== null && soonestDays >= 0
+          ? `Next: ${fmtRegistryDate(soonest.expiry)} (${soonestDays}d)`
+          : "",
+      ]),
+      cls: expired === total ? "ec-red" : "ec-amber",
+      icon: "⚠",
+    };
+  }
+
+  if (expiring) {
+    return {
+      main: `${expiring}/${total} ${total === 1 ? "batch" : "batches"} expiring soon`,
+      sub: joinSummaryParts([
+        healthy ? `${healthy} healthy` : "",
+        noExpiry ? `${noExpiry} no expiry` : "",
+        soonest && soonestDays !== null
+          ? `Soonest: ${fmtRegistryDate(soonest.expiry)} (${soonestDays}d)`
+          : "",
+      ]),
+      cls: soonestDays !== null && soonestDays <= 7 ? "ec-red" : "ec-amber",
+      icon: "⏰",
+    };
+  }
+
+  return {
+    main: `${healthy}/${total} ${total === 1 ? "batch" : "batches"} healthy`,
+    sub: joinSummaryParts([
+      noExpiry ? `${noExpiry} no expiry` : "",
+      soonest ? `Soonest expiry ${fmtRegistryDate(soonest.expiry)}` : "",
+    ]),
+    cls: "ec-green",
+    icon: "✓",
+  };
+}
+
 export function expiryLabel(item: Item): { txt: string; cls: string } {
   if (item.category === "CAPEX") {
     if (!item.amcExpiry) return { txt: "No AMC", cls: "expiry-none" };

@@ -7,6 +7,7 @@ import {
   Item,
   batchStatus,
   daysUntil,
+  expiryColumnSummary,
   fefoSort,
   isLowStock,
   stockBarColor,
@@ -21,97 +22,6 @@ function fmtDate(date?: string | null) {
     month: "short",
     year: "numeric",
   });
-}
-
-function expirySummary(item: Item) {
-  const isCapex = item.category === "CAPEX";
-  const batches = item.batches ?? [];
-
-  if (isCapex) {
-    const amcBatches = batches.filter((batch) => batch.amcExpiry);
-    if (!amcBatches.length) {
-      return {
-        main: "No AMC required",
-        sub: "Asset tracked, no contract needed",
-        cls: "ec-none",
-        icon: "·",
-      };
-    }
-
-    const expired = amcBatches.find((batch) => batchStatus(batch, true) === "amc_expired");
-    if (expired) {
-      const days = daysUntil(expired.amcExpiry);
-      return {
-        main: "AMC expired",
-        sub: `Expired ${fmtDate(expired.amcExpiry)}${days !== null ? ` (${Math.abs(days)} days ago)` : ""}`,
-        cls: "ec-red",
-        icon: "⛔",
-      };
-    }
-
-    const due = amcBatches
-      .filter((batch) => batchStatus(batch, true) === "amc_due")
-      .sort((a, b) => String(a.amcExpiry).localeCompare(String(b.amcExpiry)))[0];
-
-    if (due) {
-      const days = daysUntil(due.amcExpiry);
-      return {
-        main: `${days ?? "-"} days left`,
-        sub: `AMC expires ${fmtDate(due.amcExpiry)}`,
-        cls: days !== null && days < 30 ? "ec-red" : "ec-amber",
-        icon: "⏰",
-      };
-    }
-
-    const next = amcBatches.sort((a, b) => String(a.amcExpiry).localeCompare(String(b.amcExpiry)))[0];
-    return {
-      main: "AMC active",
-      sub: `Renew by ${fmtDate(next.amcExpiry)}`,
-      cls: "ec-green",
-      icon: "✓",
-    };
-  }
-
-  const expiringBatches = batches.filter((batch) => batch.expiry);
-  if (!expiringBatches.length) {
-    return { main: "No expiry", sub: "Consumable - no expiry date", cls: "ec-none", icon: "·" };
-  }
-
-  const expired = expiringBatches.filter((batch) => {
-    const days = daysUntil(batch.expiry);
-    return days !== null && days < 0;
-  });
-
-  const active = expiringBatches.filter((batch) => {
-    const days = daysUntil(batch.expiry);
-    return days === null || days >= 0;
-  });
-
-  if (expired.length && !active.length) {
-    return {
-      main: "All batches expired",
-      sub: `${expired.length} batch${expired.length > 1 ? "es" : ""} - dispose now`,
-      cls: "ec-red",
-      icon: "⛔",
-    };
-  }
-
-  const soonest = active.sort((a, b) => String(a.expiry).localeCompare(String(b.expiry)))[0];
-  const days = daysUntil(soonest?.expiry);
-
-  if (expired.length) {
-    return {
-      main: `${expired.length} batch${expired.length > 1 ? "es" : ""} expired`,
-      sub: soonest ? `Next active: ${fmtDate(soonest.expiry)} (${days}d)` : "",
-      cls: "ec-amber",
-      icon: "⚠",
-    };
-  }
-
-  if (days !== null && days < 30) return { main: `${days} days`, sub: `Soonest batch: ${fmtDate(soonest.expiry)}`, cls: "ec-red", icon: "⏰" };
-  if (days !== null && days < 60) return { main: `${days} days`, sub: `Soonest batch: ${fmtDate(soonest.expiry)}`, cls: "ec-amber", icon: "⏰" };
-
-  return { main: fmtDate(soonest.expiry) ?? "No expiry", sub: "Soonest batch expiry", cls: "ec-green", icon: "✓" };
 }
 
 function urgencyClass(item: Item) {
@@ -192,7 +102,7 @@ export default function RegistryTable({
             const isCapex = item.category === "CAPEX";
             const batches = fefoSort(item);
             const isExpanded = Boolean(expanded[item.id]);
-            const summary = expirySummary(item);
+            const summary = expiryColumnSummary(item);
             const low = isLowStock(item);
             const total = totalStock(item);
             const pct = stockPct(item);
