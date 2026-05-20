@@ -88,8 +88,19 @@ export function totalStock(item: Item) {
   return item.batches?.reduce((sum, batch) => sum + Number(batch.stock || 0), 0) ?? item.stock;
 }
 
+/** Flag OPEX items at or within 20% above minimum (reorder buffer). */
+export const LOW_STOCK_BUFFER_RATIO = 1.2;
+
+export function lowStockCeiling(min: number) {
+  return min > 0 ? min * LOW_STOCK_BUFFER_RATIO : 0;
+}
+
+export function isOpexLowStock(stock: number, min: number) {
+  return min > 0 && stock <= lowStockCeiling(min);
+}
+
 export function isLowStock(item: Item) {
-  return item.category === "OPEX" && totalStock(item) < item.min;
+  return item.category === "OPEX" && isOpexLowStock(totalStock(item), item.min);
 }
 
 export function itemStatus(item: Item) {

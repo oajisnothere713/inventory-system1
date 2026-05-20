@@ -19,6 +19,10 @@ type DashboardSummary = {
   capexCount?: number;
   opexCount?: number;
   activeAlerts?: number;
+  alertBreakdown?: {
+    amcDue?: number;
+    amcExpired?: number;
+  };
   amcDue?: unknown[];
 };
 
@@ -141,7 +145,7 @@ export default function Home() {
             <div className="nav-label">Category</div>
             <div className="nav-item" style={{ color: "rgba(255,255,255,0.9)" }}>
               <div className="nav-icon" style={{ color: "#93c5fd" }}>C</div> CAPEX items
-              <span className="nav-chip amber">{summary?.amcDue?.length ?? 0} AMC</span>
+              <span className="nav-chip amber">{(summary?.alertBreakdown?.amcDue ?? summary?.amcDue?.length ?? 0)} AMC</span>
             </div>
             <div className="nav-item"><div className="nav-icon" style={{ color: "#86efac" }}>O</div> OPEX items <span className="nav-chip">{summary?.opexCount ?? 0}</span></div>
           </div>

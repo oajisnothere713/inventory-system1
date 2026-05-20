@@ -1,18 +1,17 @@
 "use client";
 
-type ExpiringBatch = { batchId: number; batchNumber?: string; expiryDate?: string; quantityAvailable?: string; item?: { itemId?: number; itemName?: string } }
-type LowStockItem = { itemId: number; itemName?: string; totalAvailable: number }
-type AmcItem = { amcId: number; amcNumber?: string; contractEnd?: string; item?: { itemId?: number; itemName?: string } }
+type ExpiringBatch = { batchId: string | number; batchNumber?: string; expiryDate?: string; quantityAvailable?: string; item?: { itemId?: string | number; itemName?: string } }
+type LowStockItem = { itemId: string | number; itemName?: string; totalAvailable: number }
+type AmcItem = { amcId: string | number; amcNumber?: string; contractEnd?: string; item?: { itemId?: string | number; itemName?: string } }
 
 type Props = {
-  activeAlerts?: number
   expiring?: ExpiringBatch[]
   lowStock?: LowStockItem[]
   amcDue?: AmcItem[]
   expiredCount?: number
 }
 
-export default function AttentionCard({ activeAlerts = 0, expiring = [], lowStock = [], amcDue = [], expiredCount = 0 }: Props) {
+export default function AttentionCard({ expiring = [], lowStock = [], amcDue = [], expiredCount = 0 }: Props) {
   return (
     <div className="attention-card">
       <div className="attention-head">
