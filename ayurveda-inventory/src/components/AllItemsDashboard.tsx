@@ -6,11 +6,21 @@ import AttentionCard from './allitems/AttentionCard';
 import InventoryHealthPanel from './allitems/InventoryHealthPanel';
 import ActivityPanel from './allitems/ActivityPanel';
 
+type AlertBreakdown = {
+  total: number
+  lowStock: number
+  expiring: number
+  expired: number
+  amcDue: number
+  amcExpired: number
+}
+
 type DashboardPayload = {
   totalItems: number
   capexCount: number
   opexCount: number
   activeAlerts: number
+  alertBreakdown?: AlertBreakdown
   grnThisMonth: number
   recentGrns: {
     grnId: number
@@ -51,24 +61,28 @@ export default function AllItemsDashboard() {
           capexCount={data.capexCount ?? 0}
           opexCount={data.opexCount ?? 0}
           activeAlerts={data.activeAlerts ?? 0}
+          alertBreakdown={data.alertBreakdown}
           grnThisMonth={data.grnThisMonth ?? 0}
-          expiryAlerts={data.expiring?.length ?? 0}
-          lowStockAlerts={data.lowStock?.length ?? 0}
-          amcAlerts={data.amcDue?.length ?? 0}
         />
-        <AttentionCard activeAlerts={data.activeAlerts ?? 0} expiring={data.expiring ?? []} lowStock={data.lowStock ?? []} amcDue={data.amcDue ?? []} expiredCount={data.expiredCount ?? 0} />
+        <AttentionCard expiring={data.expiring ?? []} lowStock={data.lowStock ?? []} amcDue={data.amcDue ?? []} expiredCount={data.expiredCount ?? 0} />
 
         <div className="bottom-row">
           <InventoryHealthPanel
             totalItems={data.totalItems ?? 0}
             capexCount={data.capexCount ?? 0}
             opexCount={data.opexCount ?? 0}
-            attentionCount={(data.expiring?.length ?? 0) + (data.lowStock?.length ?? 0) + (data.amcDue?.length ?? 0)}
+            attentionCount={
+              (data.alertBreakdown?.expiring ?? 0)
+              + (data.alertBreakdown?.lowStock ?? 0)
+              + (data.alertBreakdown?.amcDue ?? 0)
+              + (data.alertBreakdown?.amcExpired ?? 0)
+            }
             expiredCount={data.expiredCount ?? 0}
-            opexLowStock={data.lowStock?.length ?? 0}
-            opexExpiring={data.expiring?.length ?? 0}
+            opexLowStock={data.alertBreakdown?.lowStock ?? 0}
+            opexExpiring={data.alertBreakdown?.expiring ?? 0}
             opexExpired={data.expiredCount ?? 0}
-            capexAttention={data.amcDue?.length ?? 0}
+            capexAttention={data.alertBreakdown?.amcDue ?? 0}
+            capexCritical={data.alertBreakdown?.amcExpired ?? 0}
           />
           <ActivityPanel recentGrns={data.recentGrns ?? []} />
         </div>

@@ -8,6 +8,7 @@ import LowStockCard from "./opex/LowStockCard";
 import AnomalyTrackerCard from "./opex/AnomalyTrackerCard";
 import WastageCard from "./opex/WastageCard";
 import { useEffect, useState } from 'react';
+import { isOpexLowStock, lowStockCeiling } from './registry/utils';
 
 type OpexItem = {
   id: string;
@@ -68,7 +69,7 @@ export default function OpexDashboard(){
     const diff = Math.round((new Date(i.expiry).getTime() - now) / (1000 * 60 * 60 * 24))
     return diff >= 0 && diff <= 30
   }).length
-  const lowStock = items.filter(i => i.stock <= i.min).length
+  const lowStock = items.filter((i) => isOpexLowStock(i.stock, i.min)).length
   const grnThisMonth = items.filter(i => i.createdAt && new Date(i.createdAt).getMonth() === new Date().getMonth() && new Date(i.createdAt).getFullYear() === new Date().getFullYear()).length
   const issuesThisMonth = 0;
 
@@ -88,14 +89,32 @@ export default function OpexDashboard(){
     else buckets.gt90++
   })
 
-  // low stock rows: only items with a real minimum set, sorted by how depleted they are
-  const fmt = (n:number) => n.toLocaleString()
+  // Low stock: at or within 20% above minimum (matches registry isLowStock)
+  const fmt = (n: number) => n.toLocaleString()
   const lowRows = items
-    .filter(i => i.min > 0)
-    .map(i => ({ name: i.name, avail: i.stock, min: i.min, unit: i.unit || '', pct: Math.round((i.stock / i.min) * 100) }))
-    .sort((a,b)=> (a.pct - b.pct))
-    .slice(0,6)
-    .map(r => [r.name, `${fmt(r.avail)}/${fmt(r.min)} ${r.unit}`.trim(), `${Math.min(100, r.pct)}%`, r.pct <= 30 ? 'pill-red' : r.pct < 100 ? 'pill-amber' : 'pill-green'] as string[])
+    .filter((i) => isOpexLowStock(i.stock, i.min))
+    .map((i) => {
+      const ceiling = lowStockCeiling(i.min)
+      const pct = Math.round((i.stock / ceiling) * 100)
+      const critical = i.stock <= Math.max(1, i.min * 0.25)
+      return {
+        name: i.name,
+        avail: i.stock,
+        min: i.min,
+        ceiling,
+        unit: i.unit || '',
+        pct,
+        pill: critical ? 'pill-red' : 'pill-amber',
+      }
+    })
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 6)
+    .map((r) => [
+      r.name,
+      `${fmt(r.avail)} / limit ${fmt(r.ceiling)} (min ${fmt(r.min)})${r.unit ? ` ${r.unit}` : ''}`.trim(),
+      `${Math.min(100, r.pct)}%`,
+      r.pill,
+    ] as string[])
 
   return (
     <>

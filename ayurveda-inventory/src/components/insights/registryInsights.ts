@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { mapRegistryRow, type RawRegistryRow } from "@/lib/registryMap";
 import { Batch, Item, batchStatus, daysUntil, fefoSort, isLowStock, itemStatus, stockPct, totalStock } from "../registry/utils";
 
 export type Severity = "critical" | "high" | "medium" | "low";
@@ -37,48 +38,6 @@ export type AssistantResponse = {
   caveat?: string;
 };
 
-type RawBatch = {
-  batch?: string | null;
-  stock?: number | string | null;
-  mfgDate?: string | null;
-  expiry?: string | null;
-  supplier?: string | null;
-  price?: number | string | null;
-  location?: string | null;
-  grn?: string | null;
-  grnDate?: string | null;
-  invoice?: string | null;
-  invoiceDate?: string | null;
-  notes?: string | null;
-  serials?: string[] | null;
-  amc?: string | null;
-  amcExpiry?: string | null;
-  amcStatus?: string | null;
-  amcSupplier?: string | null;
-};
-
-type RawRow = {
-  id?: string | number;
-  name?: string;
-  sub?: string | null;
-  category?: string;
-  subcat?: string | null;
-  stock?: number | string | null;
-  min?: number | string | null;
-  max?: number | string | null;
-  unit?: string | null;
-  expiry?: string | null;
-  dept?: string | null;
-  amcExpiry?: string | null;
-  batch?: string | null;
-  batches?: RawBatch[] | null;
-  supplier?: string | null;
-  price?: number | string | null;
-  amc?: string | null;
-  serial?: string | null;
-  purchase?: string | null;
-};
-
 export function useRegistryItems() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +54,7 @@ export function useRegistryItems() {
           setError("Registry data was not available.");
           return;
         }
-        setItems(data.map(mapRegistryRow));
+        setItems(data.map((row: RawRegistryRow) => mapRegistryRow(row)));
         setError(null);
       })
       .catch(() => {
@@ -122,61 +81,6 @@ export function useRegistryInsights() {
   return { ...registry, alerts, reports };
 }
 
-function mapRegistryRow(d: RawRow): Item {
-  const rawBatches: RawBatch[] = Array.isArray(d.batches) && d.batches.length
-    ? d.batches
-    : d.batch
-    ? [{ batch: d.batch, stock: d.stock ?? 0, expiry: d.expiry ?? null, supplier: d.supplier ?? null, price: d.price ?? null }]
-    : [];
-  const batches: Batch[] = rawBatches.map((batch) => ({
-    batch: String(batch.batch ?? ""),
-    stock: Number(batch.stock ?? 0),
-    mfgDate: batch.mfgDate ?? null,
-    expiry: batch.expiry ?? null,
-    supplier: batch.supplier ?? null,
-    price: batch.price ? Number(batch.price) : null,
-    location: batch.location ?? null,
-    grn: batch.grn ?? null,
-    grnDate: batch.grnDate ?? null,
-    invoice: batch.invoice ?? null,
-    invoiceDate: batch.invoiceDate ?? null,
-    notes: batch.notes ?? null,
-    serials: Array.isArray(batch.serials) ? batch.serials : [],
-    amc: batch.amc ?? null,
-    amcExpiry: batch.amcExpiry ?? null,
-    amcStatus: batch.amcStatus ?? null,
-    amcSupplier: batch.amcSupplier ?? null,
-  }));
-  const earliestExpiry = batches
-    .filter((batch) => batch.expiry)
-    .map((batch) => new Date(batch.expiry as string).getTime())
-    .sort((a, b) => a - b)[0];
-  const item: Item = {
-    id: String(d.id ?? ""),
-    name: d.name ?? "",
-    sub: d.sub ?? "",
-    category: d.category === "CAPEX" ? "CAPEX" : "OPEX",
-    subcat: (d.subcat as Item["subcat"]) || "medicines",
-    stock: batches.reduce((sum, batch) => sum + Number(batch.stock || 0), 0) || Number(d.stock ?? 0),
-    min: Number(d.min ?? 0),
-    max: Number(d.max ?? 0),
-    unit: d.unit ?? "",
-    expiry: earliestExpiry ? new Date(earliestExpiry).toISOString() : d.expiry ?? null,
-    dept: d.dept ?? "",
-    status: "healthy",
-    batch: batches[0]?.batch ?? d.batch ?? undefined,
-    batches,
-    supplier: d.supplier ?? undefined,
-    price: Number(d.price ?? batches[0]?.price ?? 0),
-    amc: d.amc ?? null,
-    amcExpiry: d.amcExpiry ?? null,
-    serial: d.serial ?? undefined,
-    purchase: d.purchase ?? undefined,
-  };
-  item.status = itemStatus(item) as Item["status"];
-  return item;
-}
-
 export function buildAlerts(items: Item[]): InsightAlert[] {
   let id = 1;
   const alerts: InsightAlert[] = [];
@@ -190,10 +94,10 @@ export function buildAlerts(items: Item[]): InsightAlert[] {
         severity: total <= Math.max(1, item.min * 0.25) ? "critical" : "high",
         type: "Low stock",
         icon: "-",
-        title: `${item.name} is below minimum stock`,
-        detail: `${total.toLocaleString()} ${item.unit} available against minimum ${item.min.toLocaleString()} ${item.unit}.`,
+        title: `${item.name} is in the low stock reorder zone`,
+        detail: `${total.toLocaleString()} ${item.unit} on hand; minimum ${item.min.toLocaleString()} ${item.unit} (reorder when within 20% above minimum).`,
         item: item.id,
-        action: `Reorder ${Math.max(0, item.min - total).toLocaleString()} ${item.unit} or raise purchase request.`,
+        action: `Reorder ${Math.max(0, Math.ceil(item.min * 1.2) - total).toLocaleString()} ${item.unit} or raise purchase request.`,
         time: "live",
       });
     }

@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react';
 
-export default function WastageCard(){
-  const [rows, setRows] = useState<string[][] | null>(null)
-  const [totalQty, setTotalQty] = useState<number>(0)
-  const [totalValue, setTotalValue] = useState<number>(0)
+type WastagePayload = {
+  totalQty?: number;
+  totalValue?: number;
+  writtenOff?: number;
+  rows?: (string | number)[][];
+  ytdValue?: number;
+  trendPct?: number | null;
+  selectedMonth?: string;
+};
+
+export default function WastageCard() {
+  const [data, setData] = useState<WastagePayload | null>(null)
+  const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().slice(0, 7))
 
   const monthTabs = Array.from({ length: 6 }, (_, index) => {
@@ -16,22 +25,40 @@ export default function WastageCard(){
     return { value, label }
   }).reverse()
 
-  useEffect(()=>{
+  useEffect(() => {
     let mounted = true
+    setLoading(true)
     fetch(`/api/opex/wastage?month=${selectedMonth}`)
-      .then(r=> r.ok ? r.json() : Promise.reject(r))
-      .then((data)=>{ if(!mounted) return; setTotalQty(data.totalQty || 0); setTotalValue(data.totalValue || 0); setRows(Array.isArray(data.rows) ? data.rows : []) })
-      .catch(()=>{ if(!mounted) return; setRows([]); setTotalQty(0); setTotalValue(0) })
-    return ()=>{ mounted=false }
-  },[selectedMonth])
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((payload: WastagePayload) => {
+        if (!mounted) return
+        setData(payload)
+      })
+      .catch(() => {
+        if (!mounted) return
+        setData({ totalQty: 0, totalValue: 0, writtenOff: 0, rows: [], ytdValue: 0, trendPct: null })
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => { mounted = false }
+  }, [selectedMonth])
 
-  const displayRows = rows ?? [
-    ['Haritaki Churna','1.6 kg','₹1,920',85],
-    ['Neem Tail','280 ml','₹980',45],
-    ['Chyawanprash','400 g','₹840',38],
-    ['Surgical Gloves','18 pairs','₹720',32],
-    ['Brahmi Tail','120 ml','₹360',16]
-  ]
+  const totalQty = data?.totalQty ?? 0
+  const totalValue = data?.totalValue ?? 0
+  const writtenOff = data?.writtenOff ?? 0
+  const rows = data?.rows ?? []
+  const ytdValue = data?.ytdValue ?? 0
+  const trendPct = data?.trendPct ?? null
+
+  const trendLabel = (() => {
+    if (trendPct === null) return ytdValue > 0 ? 'No prior-year baseline' : 'No YTD wastage vs last year'
+    if (trendPct === 0) return 'Same as last year (YTD)'
+    const arrow = trendPct > 0 ? '↑' : '↓'
+    return `${arrow} ${Math.abs(trendPct)}% vs last year (YTD)`
+  })()
+
+  const trendColor = trendPct === null ? 'var(--text-dim)' : trendPct > 0 ? 'var(--red)' : 'var(--green)'
 
   return (
     <div className="card">
@@ -40,11 +67,24 @@ export default function WastageCard(){
         <a className="view-link">View report →</a>
       </div>
       <div className="card-body" style={{ padding: '12px 14px' }}>
-        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 8 }}>Items expired before use — selected month</div>
-        <div className="sum-pills">
-          <div className="s-pill"><div className="s-pill-val">{totalQty}</div><div className="s-pill-lbl">items expired</div></div>
-          <div className="s-pill"><div className="s-pill-val">₹{Math.round(totalValue)}</div><div className="s-pill-lbl">value written off</div></div>
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 8 }}>
+          Expired OPEX stock still on hand — by expiry month
         </div>
+        <div className="sum-pills">
+          <div className="s-pill">
+            <div className="s-pill-val">{loading ? '…' : totalQty}</div>
+            <div className="s-pill-lbl">items expired</div>
+          </div>
+          <div className="s-pill">
+            <div className="s-pill-val">{loading ? '…' : `₹${Math.round(totalValue).toLocaleString('en-IN')}`}</div>
+            <div className="s-pill-lbl">est. value at risk</div>
+          </div>
+        </div>
+        {writtenOff > 0 ? (
+          <div style={{ fontSize: 10, color: 'var(--text-dim)', margin: '6px 0 8px' }}>
+            Logged write-off this month: ₹{Math.round(writtenOff).toLocaleString('en-IN')}
+          </div>
+        ) : null}
         <div className="month-tabs">
           {monthTabs.map((month) => (
             <button
@@ -57,18 +97,34 @@ export default function WastageCard(){
             </button>
           ))}
         </div>
-        <div className="wastage-list">
-          {displayRows.map((r,i)=> (
-            <div className="w-row" key={i}>
-              <div className="w-top"><span className="w-name">{r[0]}</span><span className="w-qty">{r[1]}</span><span className="w-val">{r[2]}</span></div>
-              <div className="w-track"><div className="w-fill" style={{ width: `${r[3]}%` }}></div></div>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="foot-txt" style={{ padding: '10px 0', textAlign: 'center' }}>Loading wastage…</div>
+        ) : rows.length === 0 ? (
+          <div className="foot-txt" style={{ padding: '10px 0', textAlign: 'center' }}>
+            No expired OPEX stock for this month — nothing to write off.
+          </div>
+        ) : (
+          <div className="wastage-list">
+            {rows.map((r, i) => (
+              <div className="w-row" key={i}>
+                <div className="w-top">
+                  <span className="w-name">{r[0]}</span>
+                  <span className="w-qty">{r[1]}</span>
+                  <span className="w-val">{r[2]}</span>
+                </div>
+                <div className="w-track">
+                  <div className="w-fill" style={{ width: `${r[3]}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div className="card-foot">
-        <span className="foot-txt">YTD wastage &nbsp;<strong>₹{Math.round(totalValue)}</strong></span>
-        <span className="foot-txt" style={{ color: 'var(--red)' }}>↑ 12% vs last year</span>
+        <span className="foot-txt">
+          YTD at risk &nbsp;<strong>₹{Math.round(ytdValue).toLocaleString('en-IN')}</strong>
+        </span>
+        <span className="foot-txt" style={{ color: trendColor }}>{trendLabel}</span>
       </div>
     </div>
   );
