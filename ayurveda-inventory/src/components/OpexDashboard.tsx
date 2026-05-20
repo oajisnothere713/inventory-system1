@@ -27,6 +27,7 @@ type OpexItem = {
 
 export default function OpexDashboard(){
   const [items, setItems] = useState<OpexItem[]>([])
+  const [metrics, setMetrics] = useState<{ grnThisMonth: number; issuesThisMonth: number }>({ grnThisMonth: 0, issuesThisMonth: 0 })
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState<number | null>(null)
 
@@ -34,8 +35,24 @@ export default function OpexDashboard(){
     let mounted = true
     fetch('/api/opex')
       .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then((data) => { if (!mounted) return; setItems(Array.isArray(data) ? data : []); setLoading(false); setNow(Date.now()); })
-      .catch(()=>{ if (!mounted) return; setItems([]); setLoading(false); setNow(Date.now()); })
+      .then((data) => {
+        if (!mounted) return;
+        if (Array.isArray(data)) {
+          // Backward compatibility for older API response shape.
+          setItems(data);
+          setMetrics({ grnThisMonth: 0, issuesThisMonth: 0 });
+        } else {
+          const payload = (data ?? {}) as { items?: OpexItem[]; metrics?: { grnThisMonth?: number; issuesThisMonth?: number } }
+          setItems(Array.isArray(payload.items) ? payload.items : []);
+          setMetrics({
+            grnThisMonth: Number(payload.metrics?.grnThisMonth ?? 0),
+            issuesThisMonth: Number(payload.metrics?.issuesThisMonth ?? 0),
+          });
+        }
+        setLoading(false);
+        setNow(Date.now());
+      })
+      .catch(()=>{ if (!mounted) return; setItems([]); setMetrics({ grnThisMonth: 0, issuesThisMonth: 0 }); setLoading(false); setNow(Date.now()); })
     return ()=>{ mounted=false }
   }, [])
 
@@ -70,8 +87,8 @@ export default function OpexDashboard(){
     return diff >= 0 && diff <= 30
   }).length
   const lowStock = items.filter((i) => isOpexLowStock(i.stock, i.min)).length
-  const grnThisMonth = items.filter(i => i.createdAt && new Date(i.createdAt).getMonth() === new Date().getMonth() && new Date(i.createdAt).getFullYear() === new Date().getFullYear()).length
-  const issuesThisMonth = 0;
+  const grnThisMonth = metrics.grnThisMonth
+  const issuesThisMonth = metrics.issuesThisMonth
 
   // expiry buckets based on earliest expiry date
   const days = (d?: string | null) => {
@@ -123,7 +140,7 @@ export default function OpexDashboard(){
       {/* ROW 1: Donut + 3 KPIs */}
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', marginBottom: 12 }}>
         <DonutKpiCard total={total} medicines={medicines} consumables={consumables} />
-        <KPICards expiring30Days={expiring30Days} lowStock={lowStock} grnThisMonth={grnThisMonth} />
+        <KPICards expiring30Days={expiring30Days} lowStock={lowStock} grnThisMonth={grnThisMonth} issuesThisMonth={issuesThisMonth} />
       </div>
 
       {/* ROW 2: Expiry pipeline + Low stock */}

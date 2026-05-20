@@ -8,6 +8,10 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any)
 
 export async function GET() {
   try {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
     const sql = `
       SELECT
         i.item_code AS id,
@@ -46,6 +50,21 @@ export async function GET() {
 
     const raw = await prisma.$queryRawUnsafe(sql)
 
+    const [grnThisMonth, issuesThisMonth] = await Promise.all([
+      prisma.grnEntry.count({
+        where: {
+          grnDate: { gte: monthStart, lt: monthEnd },
+          item: { category: 'OPEX', isActive: true },
+        },
+      }),
+      prisma.stockIssue.count({
+        where: {
+          issueDate: { gte: monthStart, lt: monthEnd },
+          item: { category: 'OPEX', isActive: true },
+        },
+      }),
+    ])
+
     const items = (raw as any[]).map((it) => ({
       id: it.id,
       name: it.name,
@@ -66,7 +85,13 @@ export async function GET() {
       createdAt: it.created_at || null,
     }))
 
-    return NextResponse.json(items)
+    return NextResponse.json({
+      items,
+      metrics: {
+        grnThisMonth,
+        issuesThisMonth,
+      },
+    })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

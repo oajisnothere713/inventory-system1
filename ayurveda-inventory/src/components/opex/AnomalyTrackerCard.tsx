@@ -60,13 +60,18 @@ export default function AnomalyTrackerCard(){
 
   function render(p:any){
     const a = avg(p.data);
+    const anomalyMonths = p.data
+      .map((v:number, idx:number) => (isAnomaly(v, a) ? `${MONTHS[idx]} (${v} ${p.unit})` : null))
+      .filter(Boolean) as string[];
+    const hasAnomaly = anomalyMonths.length > 0;
     const TT = {backgroundColor:'#fff',borderColor:'#dce8de',borderWidth:1,titleColor:'#0d1f12',bodyColor:'#3d6148',padding:10,cornerRadius:8};
 
     if (noteRef.current){
-      if (p.note) {
+      if (hasAnomaly) {
         noteRef.current.style.display='block';
         noteRef.current.style.cssText='display:block;background:#fef9ec;border:1px solid rgba(146,64,14,0.2);color:#5c3a00;border-radius:var(--r-md);padding:7px 10px;font-size:11px;margin-top:8px';
-        noteRef.current.innerHTML = `<strong>⚠ Anomaly detected:</strong> ${p.note}`;
+        const detail = p.note ? String(p.note) : `Spikes found in ${anomalyMonths.join(', ')} against 6-month average (${a} ${p.unit}/month).`;
+        noteRef.current.innerHTML = `<strong>⚠ Anomaly detected:</strong> ${detail}`;
       } else {
         noteRef.current.style.display='block';
         noteRef.current.style.cssText='display:block;background:#e6f2eb;border:1px solid rgba(26,107,60,0.2);color:#1A6B3C;border-radius:var(--r-md);padding:7px 10px;font-size:11px;margin-top:8px';
@@ -74,7 +79,7 @@ export default function AnomalyTrackerCard(){
       }
     }
     if (footLeftRef.current) footLeftRef.current.innerHTML = `6-month avg &nbsp;<strong>${a} ${p.unit}/month</strong>`;
-    if (footRightRef.current) footRightRef.current.innerHTML = p.note ? `<span style="color:var(--red)">⚠ Spike detected — action needed</span>` : `<span style="color:var(--green)">✓ Normal consumption pattern</span>`;
+    if (footRightRef.current) footRightRef.current.innerHTML = hasAnomaly ? `<span style="color:var(--red)">⚠ Spike detected — action needed</span>` : `<span style="color:var(--green)">✓ Normal consumption pattern</span>`;
 
     const ctx = canvasRef.current as HTMLCanvasElement;
     if (!ctx) return;
