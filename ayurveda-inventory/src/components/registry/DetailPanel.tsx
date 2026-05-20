@@ -53,7 +53,7 @@ const initialNewItem: NewItemForm = {
   category: "OPEX",
   subCategory: "medicines",
   itemType: "",
-  unit: "g",
+  unit: "",
   description: "",
   initialQuantity: "",
   batchNumber: "",
@@ -261,29 +261,16 @@ export default function DetailPanel({
     setNewItem((current) => ({ ...current, ...patch }));
   };
 
-  const selectedUnits = newItem.unit.split(",").map((unit) => unit.trim()).filter(Boolean);
-
-  const toggleOpexUnit = (unit: string) => {
-    const current = new Set(selectedUnits);
-    if (current.has(unit)) current.delete(unit);
-    else current.add(unit);
-    updateNewItem({ unit: Array.from(current).join(", ") });
-  };
-
   const selectedDepartment = meta.departments.find(
     (department) => department.code === newItem.primaryDeptCode || String(department.id) === newItem.primaryDeptId
   );
+  const stockUnit = newItem.unit || "";
 
   const saveNewItem = async () => {
     setSaveError(null);
 
     if (!newItem.itemName.trim()) {
       setSaveError("Item name is required.");
-      return;
-    }
-
-    if (!newItem.unit.trim()) {
-      setSaveError("Unit is required.");
       return;
     }
 
@@ -557,7 +544,7 @@ export default function DetailPanel({
                 updateNewItem({
                   category,
                   subCategory: category === "OPEX" ? "medicines" : "devices",
-                  unit: category === "OPEX" ? "g" : "pcs",
+                  unit: "",
                 });
               }}
             >
@@ -629,70 +616,75 @@ export default function DetailPanel({
         <div className="ni-grid two">
           <label className="ni-field">
             <span>Opening quantity *</span>
-            <input
-              type="number"
-              min="0"
-              step="0.001"
-              value={newItem.initialQuantity}
-              onChange={(event) => updateNewItem({ initialQuantity: event.target.value })}
-              placeholder="Quantity available now"
-            />
+            <div className="unit-input-wrap">
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={newItem.initialQuantity}
+                onChange={(event) => updateNewItem({ initialQuantity: event.target.value })}
+                placeholder={`Quantity available now${stockUnit ? ` (${stockUnit})` : ""}`}
+              />
+              <span className="unit-input-tag">{stockUnit}</span>
+            </div>
           </label>
           <label className="ni-field">
-            <span>Unit *</span>
-            {newItem.category === "OPEX" ? (
-              <div className="unit-chip-grid">
-                {opexUnits.map((unit) => (
-                  <button
-                    key={unit}
-                    type="button"
-                    className={`unit-chip${selectedUnits.includes(unit) ? " selected" : ""}`}
-                    onClick={() => toggleOpexUnit(unit)}
-                  >
-                    {unit}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <select value={newItem.unit} onChange={(event) => updateNewItem({ unit: event.target.value })}>
-                {capexUnits.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
-              </select>
-            )}
+            <span>Unit</span>
+            <select
+              value={newItem.unit}
+              onChange={(event) => updateNewItem({ unit: event.target.value })}
+            >
+              <option value="">None</option>
+              {(newItem.category === "OPEX" ? opexUnits : capexUnits).map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <div className="ni-grid three stock-threshold-grid">
           <label className="ni-field">
             <span>Min stock *</span>
-            <input
-              type="number"
-              min="0"
-              step="0.001"
-              value={newItem.minStockLevel}
-              onChange={(event) => updateNewItem({ minStockLevel: event.target.value })}
-              placeholder="0"
-            />
+            <div className="unit-input-wrap">
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={newItem.minStockLevel}
+                onChange={(event) => updateNewItem({ minStockLevel: event.target.value })}
+                placeholder={`0${stockUnit ? ` ${stockUnit}` : ""}`}
+              />
+              <span className="unit-input-tag">{stockUnit}</span>
+            </div>
           </label>
           <label className="ni-field">
             <span>Max stock</span>
-            <input
-              type="number"
-              min="0"
-              step="0.001"
-              value={newItem.maxStockLevel}
-              onChange={(event) => updateNewItem({ maxStockLevel: event.target.value })}
-              placeholder="Optional"
-            />
+            <div className="unit-input-wrap">
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={newItem.maxStockLevel}
+                onChange={(event) => updateNewItem({ maxStockLevel: event.target.value })}
+                placeholder={`Optional${stockUnit ? ` (${stockUnit})` : ""}`}
+              />
+              <span className="unit-input-tag">{stockUnit}</span>
+            </div>
           </label>
           <label className="ni-field">
             <span>Reorder qty</span>
-            <input
-              type="number"
-              min="0"
-              step="0.001"
-              value={newItem.reorderQty}
-              onChange={(event) => updateNewItem({ reorderQty: event.target.value })}
-              placeholder="Suggested"
-            />
+            <div className="unit-input-wrap">
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={newItem.reorderQty}
+                onChange={(event) => updateNewItem({ reorderQty: event.target.value })}
+                placeholder={`Suggested${stockUnit ? ` (${stockUnit})` : ""}`}
+              />
+              <span className="unit-input-tag">{stockUnit}</span>
+            </div>
           </label>
         </div>
         <p className="ni-help">Alert fires below this.</p>
@@ -715,27 +707,6 @@ export default function DetailPanel({
               type="date"
               value={newItem.invoiceDate}
               onChange={(event) => updateNewItem({ invoiceDate: event.target.value })}
-            />
-          </label>
-        </div>
-        <div className="ni-grid two">
-          <label className="ni-field">
-            <span>Price per unit</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={newItem.pricePerUnit}
-              onChange={(event) => updateNewItem({ pricePerUnit: event.target.value })}
-              placeholder="Purchase rate"
-            />
-          </label>
-          <label className="ni-field">
-            <span>Store location</span>
-            <input
-              value={newItem.storeLocation}
-              onChange={(event) => updateNewItem({ storeLocation: event.target.value })}
-              placeholder="Main Store"
             />
           </label>
         </div>
@@ -780,6 +751,17 @@ export default function DetailPanel({
                 onChange={(event) => updateNewItem({ expiryDate: event.target.value })}
               />
             </label>
+            <label className="ni-field">
+              <span>Price per unit</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newItem.pricePerUnit}
+                onChange={(event) => updateNewItem({ pricePerUnit: event.target.value })}
+                placeholder="Purchase rate"
+              />
+            </label>
           </div>
         </div>
       ) : (
@@ -792,6 +774,17 @@ export default function DetailPanel({
               onChange={(event) => updateNewItem({ serialNumbers: event.target.value })}
               placeholder="One serial per line or comma-separated"
               rows={2}
+            />
+          </label>
+          <label className="ni-field">
+            <span>Price per unit</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={newItem.pricePerUnit}
+              onChange={(event) => updateNewItem({ pricePerUnit: event.target.value })}
+              placeholder="Purchase rate"
             />
           </label>
 
@@ -952,6 +945,14 @@ export default function DetailPanel({
               value={newItem.defaultSupplierName}
               onChange={(event) => updateNewItem({ defaultSupplierName: event.target.value, defaultSupplierId: "" })}
               placeholder="Type supplier name if not listed"
+            />
+          </label>
+          <label className="ni-field">
+            <span>Store location</span>
+            <input
+              value={newItem.storeLocation}
+              onChange={(event) => updateNewItem({ storeLocation: event.target.value })}
+              placeholder="Main Store"
             />
           </label>
         </div>
