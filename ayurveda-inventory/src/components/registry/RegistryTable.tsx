@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { MdDelete } from "react-icons/md";
 import {
   Batch,
   Item,
@@ -33,6 +34,7 @@ function expirySummary(item: Item) {
         main: "No AMC required",
         sub: "Asset tracked, no contract needed",
         cls: "ec-none",
+        icon: "·",
       };
     }
 
@@ -43,6 +45,7 @@ function expirySummary(item: Item) {
         main: "AMC expired",
         sub: `Expired ${fmtDate(expired.amcExpiry)}${days !== null ? ` (${Math.abs(days)} days ago)` : ""}`,
         cls: "ec-red",
+        icon: "⛔",
       };
     }
 
@@ -56,6 +59,7 @@ function expirySummary(item: Item) {
         main: `${days ?? "-"} days left`,
         sub: `AMC expires ${fmtDate(due.amcExpiry)}`,
         cls: days !== null && days < 30 ? "ec-red" : "ec-amber",
+        icon: "⏰",
       };
     }
 
@@ -64,12 +68,13 @@ function expirySummary(item: Item) {
       main: "AMC active",
       sub: `Renew by ${fmtDate(next.amcExpiry)}`,
       cls: "ec-green",
+      icon: "✓",
     };
   }
 
   const expiringBatches = batches.filter((batch) => batch.expiry);
   if (!expiringBatches.length) {
-    return { main: "No expiry", sub: "Consumable - no expiry date", cls: "ec-none" };
+    return { main: "No expiry", sub: "Consumable - no expiry date", cls: "ec-none", icon: "·" };
   }
 
   const expired = expiringBatches.filter((batch) => {
@@ -87,6 +92,7 @@ function expirySummary(item: Item) {
       main: "All batches expired",
       sub: `${expired.length} batch${expired.length > 1 ? "es" : ""} - dispose now`,
       cls: "ec-red",
+      icon: "⛔",
     };
   }
 
@@ -98,13 +104,14 @@ function expirySummary(item: Item) {
       main: `${expired.length} batch${expired.length > 1 ? "es" : ""} expired`,
       sub: soonest ? `Next active: ${fmtDate(soonest.expiry)} (${days}d)` : "",
       cls: "ec-amber",
+      icon: "⚠",
     };
   }
 
-  if (days !== null && days < 30) return { main: `${days} days`, sub: `Soonest batch: ${fmtDate(soonest.expiry)}`, cls: "ec-red" };
-  if (days !== null && days < 60) return { main: `${days} days`, sub: `Soonest batch: ${fmtDate(soonest.expiry)}`, cls: "ec-amber" };
+  if (days !== null && days < 30) return { main: `${days} days`, sub: `Soonest batch: ${fmtDate(soonest.expiry)}`, cls: "ec-red", icon: "⏰" };
+  if (days !== null && days < 60) return { main: `${days} days`, sub: `Soonest batch: ${fmtDate(soonest.expiry)}`, cls: "ec-amber", icon: "⏰" };
 
-  return { main: fmtDate(soonest.expiry) ?? "No expiry", sub: "Soonest batch expiry", cls: "ec-green" };
+  return { main: fmtDate(soonest.expiry) ?? "No expiry", sub: "Soonest batch expiry", cls: "ec-green", icon: "✓" };
 }
 
 function urgencyClass(item: Item) {
@@ -223,7 +230,10 @@ export default function RegistryTable({
                     )}
                   </td>
                   <td>
-                    <div className={`exp-main ${summary.cls}`}>{summary.main}</div>
+                    <div className={`exp-main ${summary.cls}`}>
+                      <span className="exp-icon" aria-hidden="true">{summary.icon}</span>
+                      <span>{summary.main}</span>
+                    </div>
                     <div className="exp-sub">{summary.sub}</div>
                   </td>
                   <td><span className="dept-cell">{item.dept}</span></td>
@@ -234,7 +244,9 @@ export default function RegistryTable({
                         event.stopPropagation();
                         window.dispatchEvent(new CustomEvent("open-grn", { detail: item.id }));
                       }}>+ GRN</button>
-                      <button className="ra danger" onClick={(event) => { event.stopPropagation(); onDeleteItem(item); }}>Delete</button>
+                      <button className="ra danger icon-only" aria-label="Delete item" title="Delete item" onClick={(event) => { event.stopPropagation(); onDeleteItem(item); }}>
+                        <MdDelete size={22} />
+                      </button>
                     </div>
                   </td>
                 </tr>

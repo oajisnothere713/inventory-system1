@@ -215,6 +215,12 @@ tbody tr:hover .action-cell{opacity:1}
 .unit-chip{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:8px 11px;font-family:var(--sans);font-size:12px;color:var(--text-mid);cursor:pointer}
 .unit-chip.selected{background:var(--green);border-color:var(--green);color:#fff}
 .stock-threshold-grid{margin-top:12px}
+
+.unit-input-wrap{position:relative}
+
+.unit-input-wrap input{padding-right:54px}
+
+.unit-input-tag{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;color:var(--text-dim);pointer-events:none;background:var(--surface);padding-left:6px}
 .department-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .department-card{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:12px 10px;text-align:center;cursor:pointer;font-family:var(--sans);color:var(--text)}
 .department-card span{display:block;font-size:12.5px;font-weight:600}
@@ -327,25 +333,8 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .irow td:first-child {
-  border-left: 3px solid transparent;
-  padding-left: 9px;
+  padding-left: 10px;
   text-align: center;
-}
-
-.irow.u-red td:first-child {
-  border-left-color: var(--red);
-}
-
-.irow.u-amber td:first-child {
-  border-left-color: var(--amber);
-}
-
-.irow.u-blue td:first-child {
-  border-left-color: var(--blue);
-}
-
-.irow.u-green td:first-child {
-  border-left-color: transparent;
 }
 
 .etog {
@@ -437,9 +426,18 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .exp-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.exp-icon {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .exp-sub {
@@ -462,7 +460,8 @@ tbody tr:hover .action-cell{opacity:1}
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .irow:hover .row-acts {
@@ -471,6 +470,9 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .ra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 10.5px;
@@ -508,6 +510,15 @@ tbody tr:hover .action-cell{opacity:1}
   color: #fff;
   border-color: var(--red);
 }
+
+.ra.icon-only {
+  width: 28px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+
 
 .ra:disabled {
   opacity: 0.45;
