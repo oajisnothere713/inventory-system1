@@ -444,11 +444,15 @@ tbody tr:hover .action-cell{opacity:1}
   font-size: 11.5px;
   color: var(--text-dim);
   margin-top: 1px;
+  line-height: 1.35;
+  white-space: normal;
+  max-width: 220px;
 }
 
 .ec-red { color: var(--red); }
 .ec-amber { color: var(--amber); }
 .ec-green { color: var(--green); }
+.ec-blue { color: var(--blue); }
 .ec-none {
   color: var(--text-mute);
   font-weight: 400;
