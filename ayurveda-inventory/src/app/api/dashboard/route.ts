@@ -15,9 +15,9 @@ export async function GET() {
     // Postgres providers (eg. Neon) limit transaction start time which can fail
     // for short-lived connections — use Promise.all to avoid P2028.
     const [totalItems, capexCount, opexCount, activeAlerts, grnThisMonth, recentGrns, expiredCount] = await Promise.all([
-      prisma.item.count(),
-      prisma.item.count({ where: { category: 'CAPEX' } }),
-      prisma.item.count({ where: { category: 'OPEX' } }),
+      prisma.item.count({ where: { isActive: true } }),
+      prisma.item.count({ where: { category: 'CAPEX', isActive: true } }),
+      prisma.item.count({ where: { category: 'OPEX', isActive: true } }),
       prisma.alert.count({ where: { status: 'active' } }),
       prisma.grnEntry.count({ where: { grnDate: { gte: firstDayOfMonth } } }),
       // limit fields returned for recent GRNs to reduce payload

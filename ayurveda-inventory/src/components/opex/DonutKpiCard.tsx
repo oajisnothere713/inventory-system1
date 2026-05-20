@@ -3,6 +3,14 @@
 type Props = { total: number; medicines: number; consumables: number };
 
 export default function DonutKpiCard({ total, medicines, consumables }: Props) {
+  const circumference = 2 * Math.PI * 29 // ~182.2
+  const medPct = total ? medicines / total : 0.85
+  const conPct = total ? consumables / total : 0.15
+  const medArc = circumference * medPct
+  const conArc = circumference * conPct
+  const medOffset = circumference * 0.25
+  const conOffset = -(medArc - medOffset)
+
   return (
     <div className="card">
       <div className="card-head"><span className="card-title">Total OPEX items</span>
@@ -15,9 +23,9 @@ export default function DonutKpiCard({ total, medicines, consumables }: Props) {
           <svg width="80" height="80" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
             <circle cx="40" cy="40" r="29" fill="none" stroke="#e8eee9" strokeWidth={11} />
             <circle cx="40" cy="40" r="29" fill="none" stroke="#1A6B3C" strokeWidth={11}
-              strokeDasharray="153.9 28.3" strokeDashoffset="45.6" />
+              strokeDasharray={`${medArc} ${circumference - medArc}`} strokeDashoffset={`${medOffset}`} />
             <circle cx="40" cy="40" r="29" fill="none" stroke="#185FA5" strokeWidth={11}
-              strokeDasharray="28.3 153.9" strokeDashoffset="-108.3" />
+              strokeDasharray={`${conArc} ${circumference - conArc}`} strokeDashoffset={`${conOffset}`} />
             <text x="40" y="36" textAnchor="middle" fontSize={14} fontWeight={500}
               fill="#0d1f12" fontFamily="'DM Mono',monospace">{total}</text>
             <text x="40" y="48" textAnchor="middle" fontSize={8}

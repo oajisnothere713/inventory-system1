@@ -388,7 +388,7 @@ export default function AyurVaidyaRegistry() {
   };
 
   const deleteItem = async (item: Item) => {
-    const ok = window.confirm(`Delete ${item.name} (${item.id}) from Item Registry? Existing GRN and issue history will stay saved.`);
+    const ok = window.confirm(`Delete ${item.name} (${item.id}) from Item Registry? it will be deleted and would not be recovereaable.`);
     if (!ok) return;
 
     try {

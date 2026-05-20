@@ -10,10 +10,13 @@ const PRODUCTS = [
   {name:'Haritaki',color:'#3d5a6c',data:[95,110,80,130,340,90],unit:'g',note:'Mar usage (340g) was 2.6× the avg (141g). Unexpectedly high — check if stock was bulk issued or misrecorded.'}
 ];
 
+const MONTHS = ['Nov','Dec','Jan','Feb','Mar','Apr'];
+const FACTOR = 1.5;
+
 type Product = { name: string; color?: string; data: number[]; unit?: string; note?: string | null }
 
 function avg(arr:number[]){return Math.round(arr.reduce((a,b)=>a+b,0)/arr.length)}
-function isAnomaly(v:number,a:number){return v>a*1.5}
+function isAnomaly(v:number,a:number){return v>a*FACTOR}
 
 export default function AnomalyTrackerCard(){
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,10 +60,18 @@ export default function AnomalyTrackerCard(){
 
   function render(p:any){
     const a = avg(p.data);
+    const TT = {backgroundColor:'#fff',borderColor:'#dce8de',borderWidth:1,titleColor:'#0d1f12',bodyColor:'#3d6148',padding:10,cornerRadius:8};
+
     if (noteRef.current){
-      noteRef.current.style.display='block';
-      noteRef.current.style.background = p.note ? '#fef9ec' : '#e6f2eb';
-      noteRef.current.innerHTML = p.note ? `<strong>⚠ Anomaly detected:</strong> ${p.note}` : `<strong>✓ No anomalies</strong> — consumption within normal range all 6 months.`;
+      if (p.note) {
+        noteRef.current.style.display='block';
+        noteRef.current.style.cssText='display:block;background:#fef9ec;border:1px solid rgba(146,64,14,0.2);color:#5c3a00;border-radius:var(--r-md);padding:7px 10px;font-size:11px;margin-top:8px';
+        noteRef.current.innerHTML = `<strong>⚠ Anomaly detected:</strong> ${p.note}`;
+      } else {
+        noteRef.current.style.display='block';
+        noteRef.current.style.cssText='display:block;background:#e6f2eb;border:1px solid rgba(26,107,60,0.2);color:#1A6B3C;border-radius:var(--r-md);padding:7px 10px;font-size:11px;margin-top:8px';
+        noteRef.current.innerHTML = `<strong>✓ No anomalies</strong> — consumption within normal range all 6 months.`;
+      }
     }
     if (footLeftRef.current) footLeftRef.current.innerHTML = `6-month avg &nbsp;<strong>${a} ${p.unit}/month</strong>`;
     if (footRightRef.current) footRightRef.current.innerHTML = p.note ? `<span style="color:var(--red)">⚠ Spike detected — action needed</span>` : `<span style="color:var(--green)">✓ Normal consumption pattern</span>`;
@@ -71,8 +82,70 @@ export default function AnomalyTrackerCard(){
     try{ if (chartRef.current) chartRef.current.destroy(); }catch(e){}
     chartRef.current = new Chart(ctx, {
       type: 'bar',
-      data: { labels: ['Nov','Dec','Jan','Feb','Mar','Apr'], datasets: [{ label: 'Monthly usage', data: p.data, backgroundColor: p.data.map((v:number)=>isAnomaly(v,a)?'rgba(185,28,28,0.7)':`${p.color}99`), borderColor: p.data.map((v:number)=>isAnomaly(v,a)?'#B91C1C':p.color), borderWidth:1.5 }] },
-      options: { responsive:true, maintainAspectRatio:false }
+      data: {
+        labels: MONTHS,
+        datasets: [
+          {
+            label: 'Monthly usage',
+            data: p.data,
+            backgroundColor: p.data.map((v:number)=>isAnomaly(v,a)?'rgba(185,28,28,0.7)':`${p.color}99`),
+            borderColor: p.data.map((v:number)=>isAnomaly(v,a)?'#B91C1C':p.color),
+            borderWidth: 1.5,
+            borderRadius: {topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},
+            borderSkipped: false,
+            barPercentage: 0.55,
+            categoryPercentage: 0.7,
+            order: 2,
+          },
+          {
+            label: '6-month average',
+            data: Array(6).fill(a),
+            type: 'line',
+            borderColor: '#1A6B3C',
+            borderWidth: 2,
+            borderDash: [5,4],
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            fill: false,
+            tension: 0,
+            order: 1,
+          },
+          {
+            label: 'Anomaly',
+            data: p.data.map((v:number)=>isAnomaly(v,a)?v:null),
+            type: 'scatter',
+            pointBackgroundColor: '#B91C1C',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            order: 0,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...TT,
+            callbacks: {
+              label: (ctx2:any) => {
+                if (ctx2.dataset.label === 'Anomaly' && ctx2.parsed.y !== null)
+                  return ` ⚠ Spike: ${ctx2.parsed.y} ${p.unit} (avg: ${a})`;
+                if (ctx2.dataset.label === '6-month average')
+                  return ` Avg: ${a} ${p.unit}`;
+                return ` Usage: ${ctx2.parsed.y} ${p.unit}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 11 } } },
+          y: { beginAtZero: false, grid: { color: '#dce8de', lineWidth: 0.5 }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 10, family: "'DM Mono',monospace" } } }
+        }
+      }
     });
   }
 
