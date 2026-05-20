@@ -109,8 +109,23 @@ const cleanPayloadValue = (value: unknown) => {
   return text || "-";
 };
 
-const itemPayload = (item: Item) =>
-  [
+const opexBatchNumbersLabel = (item: Item, limit = 10) => {
+  if (item.category !== "OPEX") return "";
+  const list = (item.batches ?? [])
+    .map((batch) => String(batch.batchNo ?? "").trim())
+    .filter(Boolean);
+
+  if (!list.length) return "";
+  if (list.length <= limit) return list.join(", ");
+
+  const extra = list.length - limit;
+  return `${list.slice(0, limit).join(", ")} +${extra} more`;
+};
+
+const itemPayload = (item: Item) => {
+  const opexBatchLine = opexBatchNumbersLabel(item);
+
+  return [
     "AyurVaidya Inventory QR",
     "Type: Product",
     `ITEM:${item.id}`,
@@ -122,8 +137,10 @@ const itemPayload = (item: Item) =>
     `Minimum stock: ${cleanPayloadValue(item.minStock)} ${cleanPayloadValue(item.unit)}`,
     `Supplier: ${cleanPayloadValue(item.supplier)}`,
     `Batches/procurements: ${item.batches.length}`,
+    ...(opexBatchLine ? [`Batch numbers: ${opexBatchLine}`] : []),
     `Serial numbers: ${item.batches.reduce((sum, batch) => sum + (batch.serialNumbers?.length ?? 0), 0)}`,
   ].join("\n");
+};
 
 const batchPayload = (item: Item, batch: Batch) =>
   [

@@ -56,6 +56,17 @@ const fmtDate = (d: string) =>
 const daysUntil = (d: string) =>
   Math.round((new Date(d).getTime() - new Date().getTime()) / 86400000);
 
+const OPEX_UNIT_OPTIONS = ["ml", "g", "kg", "tab", "cap", "Pcs", "Rolls", "Pairs"];
+const CAPEX_UNIT_OPTIONS = ["nos", "Pcs", "unit", "set"];
+
+const fallbackUnitFor = (category?: string | null) =>
+  category === "CAPEX" ? "nos" : "ml";
+
+const buildUnitOptions = (base: string[], unit?: string | null) => {
+  const merged = [unit, ...base].filter(Boolean).map((u) => String(u));
+  return Array.from(new Set(merged));
+};
+
 function parseQrPayload(raw: string) {
   const text = String(raw || "").trim();
   const itemMatch = text.match(/(?:^|[\n|])ITEM:\s*([^\n|]+)/i);
@@ -209,7 +220,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
       itemCode: selectedItem.id,
       batchNo: form.batchNo,
       qty: Number(form.qty || 0),
-      unit: form.unit,
+      unit: selectedItem.unit || form.unit,
       mfgDate: form.mfgDate || null,
       expiryDate: form.expiryDate || null,
       supplierName: form.supplierName || null,
@@ -307,6 +318,8 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
   const batchQrPayload = selectedItem ? grnBatchQrPayload(selectedItem, form, serialList) : "";
   const batchQrSrc = batchQrPayload ? qrSrcFor(batchQrPayload) : "";
   const expiryAlertDate = form.expiryDate ? dateMinusDays(form.expiryDate, 15) : "";
+  const unitOptions = buildUnitOptions(isCapex ? CAPEX_UNIT_OPTIONS : OPEX_UNIT_OPTIONS, selectedItem?.unit);
+  const unitLocked = Boolean(selectedItem?.unit);
 
   const shelfLife = (() => {
     if (!form.mfgDate || !form.expiryDate) return null;
@@ -369,12 +382,13 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const selectItem = (item: Item) => {
+    const fallbackUnit = fallbackUnitFor(item.category);
     setSelectedItem(item);
     setSearchQuery(item.name);
     setShowResults(false);
     setForm((f) => ({
       ...f,
-      unit: item.unit,
+      unit: item.unit || fallbackUnit,
       expiryType: item.category === "CAPEX" ? "none" : "date",
       batchNo: "",
       mfgDate: "",
@@ -407,7 +421,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
           sub: data.itemType || '',
           category: data.category || 'OPEX',
           subcat: data.subCategory || '',
-          unit: data.unit || 'ml',
+          unit: data.unit || fallbackUnitFor(data.category),
           dept: '',
           currentStock: Array.isArray(data.itemBatches) ? data.itemBatches.reduce((s: number, b: any) => s + Number(b.quantityAvailable ?? b.quantityReceived ?? 0), 0) : 0,
           minStock: Number(data.minStockLevel || 0),
@@ -436,7 +450,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
           sub: data.itemType || '',
           category: data.category || 'OPEX',
           subcat: data.subCategory || '',
-          unit: data.unit || 'ml',
+          unit: data.unit || fallbackUnitFor(data.category),
           dept: '',
           currentStock: Array.isArray(data.itemBatches) ? data.itemBatches.reduce((s: number, b: any) => s + Number(b.quantityAvailable ?? b.quantityReceived ?? 0), 0) : 0,
           minStock: Number(data.minStockLevel || 0),
@@ -822,11 +836,15 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                           <div style={{ display: "flex", gap: 8 }}>
                             <input type="number" placeholder="0" style={{ flex: 1 }} min={1} value={form.qty}
                               onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))} />
-                            <select style={{ width: 80 }} value={form.unit}
-                              onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
-                              {["ml", "g", "tab", "cap", "Pcs", "Rolls", "Pairs"].map((u) => <option key={u}>{u}</option>)}
-                            </select>
+                            <div style={{ position: 'relative', width: 88 }}>
+                              <select className={unitLocked ? 'unit-fixed' : ''} style={{ width: '100%' }} value={form.unit}
+                                disabled={unitLocked}
+                                onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
+                                {unitOptions.map((u) => <option key={u}>{u}</option>)}
+                              </select>
+                            </div>
                           </div>
+                          {unitLocked && <div className="field-hint">Unit set from item registry.</div>}
                           {qty > 0 && selectedItem && (
                             <div className="field-computed">
                               Stock after GRN: {newStock.toLocaleString()} {form.unit}
@@ -882,11 +900,15 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
                               <div style={{ display: "flex", gap: 8 }}>
                                 <input type="number" placeholder="0" style={{ flex: 1 }} min={1} value={form.qty}
                                   onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))} />
-                                <select style={{ width: 80 }} value={form.unit}
-                                  onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
-                                  {["nos", "Pcs", "unit", "set"].map((u) => <option key={u}>{u}</option>)}
-                                </select>
+                                <div style={{ position: 'relative', width: 88 }}>
+                                  <select className={unitLocked ? 'unit-fixed' : ''} style={{ width: '100%' }} value={form.unit}
+                                    disabled={unitLocked}
+                                    onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}>
+                                    {unitOptions.map((u) => <option key={u}>{u}</option>)}
+                                  </select>
+                                </div>
                               </div>
+                              {unitLocked && <div className="field-hint">Unit set from item registry.</div>}
                               {qty > 0 && selectedItem && (
                                 <div className="field-computed">
                                   Stock after GRN: {newStock.toLocaleString()} {form.unit}
@@ -1409,6 +1431,8 @@ width:100%;}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);background:var(--surface)}
 .field input::placeholder,.field textarea::placeholder{color:var(--text-mute)}
 .field-hint{font-size:10.5px;color:var(--text-mute);margin-top:3px}
+.unit-fixed{appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:none;padding-right:10px}
+.unit-fixed::-ms-expand{display:none}
 .field-computed{font-size:10.5px;color:var(--green-mid);margin-top:3px;font-weight:500}
 .field-warn{font-size:10.5px;color:var(--amber);margin-top:3px}
 

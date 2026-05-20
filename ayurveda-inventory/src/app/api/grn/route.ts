@@ -80,6 +80,7 @@ export async function POST(req: Request) {
     // Resolve item and compute stock before starting a transaction to reduce transaction wait time.
     const it = await prisma.item.findFirst({ where: { itemCode } })
     if (!it) return NextResponse.json({ error: 'item not found' }, { status: 400 })
+    const finalUnit = it.unit || unit || ''
 
     const stockAggOuter = await prisma.itemBatch.aggregate({
       where: { itemId: it.itemId },
@@ -135,7 +136,7 @@ export async function POST(req: Request) {
           // Insert records and RETURNING inserted rows to avoid extra SELECTs
           const grnInsert = (await tx.$queryRaw`
             INSERT INTO grn_entries (grn_id, grn_number, grn_date, item_id, batch_id, supplier_id, quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number, invoice_date, price_per_unit, total_value, store_location, received_by, stock_before, stock_after, created_at)
-            VALUES (${grnId}, ${grnNumber}, CURRENT_DATE, ${it.itemId}, ${batchId}, ${supId ?? null}, ${receiveQty}, ${unit}, ${batchNo}, ${mfgDate ? new Date(mfgDate) : null}, ${expiryDate ? new Date(expiryDate) : null}, ${invoiceNo ?? ''}, ${invoiceDate ? new Date(invoiceDate) : null}, ${pricePerUnit ?? null}, ${total ?? null}, ${storeLocation ?? ''}, ${recvId}, ${stockBefore}, ${stockBefore + receiveQty}, CURRENT_TIMESTAMP)
+            VALUES (${grnId}, ${grnNumber}, CURRENT_DATE, ${it.itemId}, ${batchId}, ${supId ?? null}, ${receiveQty}, ${finalUnit}, ${batchNo}, ${mfgDate ? new Date(mfgDate) : null}, ${expiryDate ? new Date(expiryDate) : null}, ${invoiceNo ?? ''}, ${invoiceDate ? new Date(invoiceDate) : null}, ${pricePerUnit ?? null}, ${total ?? null}, ${storeLocation ?? ''}, ${recvId}, ${stockBefore}, ${stockBefore + receiveQty}, CURRENT_TIMESTAMP)
             RETURNING grn_id, grn_number, grn_date, item_id, batch_id, supplier_id, quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number, invoice_date, price_per_unit, total_value, store_location, received_by, stock_before, stock_after, created_at;
           `) as any
 
