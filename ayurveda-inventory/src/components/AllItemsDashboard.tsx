@@ -22,6 +22,7 @@ type DashboardPayload = {
   activeAlerts: number
   alertBreakdown?: AlertBreakdown
   grnThisMonth: number
+  issuesThisMonth?: number
   recentGrns: {
     grnId: number
     grnNumber: string
@@ -63,6 +64,7 @@ export default function AllItemsDashboard() {
           activeAlerts={data.activeAlerts ?? 0}
           alertBreakdown={data.alertBreakdown}
           grnThisMonth={data.grnThisMonth ?? 0}
+          issuesThisMonth={data.issuesThisMonth ?? 0}
         />
         <AttentionCard expiring={data.expiring ?? []} lowStock={data.lowStock ?? []} amcDue={data.amcDue ?? []} expiredCount={data.expiredCount ?? 0} />
 

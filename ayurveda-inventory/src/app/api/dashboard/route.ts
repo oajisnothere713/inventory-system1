@@ -40,6 +40,17 @@ export async function GET() {
       quantityReceived: g.quantityReceived?.toString?.(),
     }))
 
+    // compute issues this month and total value received this month
+    const [issuesThisMonth, grnSum] = await Promise.all([
+      prisma.stockIssue.count({ where: { issueDate: { gte: firstDayOfMonth } } }),
+      prisma.grnEntry.aggregate({ where: { grnDate: { gte: firstDayOfMonth } }, _sum: { totalValue: true } }),
+    ])
+
+    const valueReceivedNum = Number((grnSum as any)?._sum?.totalValue ?? 0)
+    const valueReceived = valueReceivedNum > 0
+      ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(valueReceivedNum)
+      : ''
+
     return NextResponse.json({
       totalItems,
       capexCount,
@@ -47,6 +58,8 @@ export async function GET() {
       activeAlerts: alertBreakdown.total,
       alertBreakdown,
       grnThisMonth,
+      issuesThisMonth,
+      valueReceived,
       expiredCount: alertBreakdown.expired,
       recentGrns: serialized,
       expiring,
