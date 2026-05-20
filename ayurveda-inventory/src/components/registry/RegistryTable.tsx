@@ -164,7 +164,6 @@ export default function RegistryTable({
           <col className="name" />
           <col className="cat" />
           <col className="stock" />
-          <col className="units" />
           <col className="exp" />
           <col className="dept" />
           <col className="act" />
@@ -172,11 +171,10 @@ export default function RegistryTable({
         <thead>
           <tr>
             <th />
-            <th>Item code</th>
+            <th>ID</th>
             <th>Item name</th>
             <th>Category</th>
             <th>Stock</th>
-            <th>Batches / Units</th>
             <th>Expiry date / AMC due</th>
             <th>Dept</th>
             <th>Actions</th>
@@ -191,10 +189,6 @@ export default function RegistryTable({
             const low = isLowStock(item);
             const total = totalStock(item);
             const pct = stockPct(item);
-            const alertBatches = batches.filter((batch) =>
-              ["expired", "amc_expired", "amc_due", "expiring"].includes(batchStatus(batch, isCapex))
-            );
-
             return (
               <React.Fragment key={item.id}>
                 <tr
@@ -224,21 +218,9 @@ export default function RegistryTable({
                       <div>
                         <div className="sval">{total.toLocaleString()} {item.unit}</div>
                         <div className="sbar"><div className="sbf" style={{ width: `${pct}%`, background: stockBarColor(item) }} /></div>
+                        <div className="spct">{pct}% of min {item.min.toLocaleString()}</div>
                       </div>
                     )}
-                  </td>
-                  <td>
-                    <button
-                      className={`batch-link batch-summary-link${alertBatches.length ? " attention" : ""}`}
-                      type="button"
-                      onClick={(event) => { event.stopPropagation(); toggle(item.id); }}
-                    >
-                      {isCapex ? (
-                        `${batches.length} procurement${batches.length !== 1 ? "s" : ""}`
-                      ) : (
-                        `${pct}% of min - ${batches.length} batch${batches.length !== 1 ? "es" : ""}${alertBatches.length ? ` - ${alertBatches.length} need attention` : ""}`
-                      )}
-                    </button>
                   </td>
                   <td>
                     <div className={`exp-main ${summary.cls}`}>{summary.main}</div>
@@ -260,7 +242,7 @@ export default function RegistryTable({
                 {isExpanded ? (
                   <>
                     <tr className="b-hdr">
-                      <td colSpan={9}>
+                      <td colSpan={8}>
                         <div className="b-hdr-in">
                           <span className="bc-tog" />
                           <span className="bc-code">{isCapex ? "GRN ref" : "Batch no."}</span>
@@ -283,7 +265,7 @@ export default function RegistryTable({
 
                       return (
                         <tr key={`${item.id}-${batch.batch}-${batchIndex}`} className={`b-row${batchIndex === batches.length - 1 ? " last" : ""}`}>
-                          <td colSpan={9}>
+                          <td colSpan={8}>
                             <div className="b-row-in">
                               <span className="bc-tog" />
                               <span className="bc-code"><span className="bnum">{isCapex ? batch.grn || batch.batch : batch.batch}</span></span>
@@ -329,7 +311,7 @@ export default function RegistryTable({
                     })}
 
                     <tr className="b-foot">
-                      <td colSpan={9}>
+                      <td colSpan={8}>
                         <div className="b-foot-in">
                         </div>
                       </td>

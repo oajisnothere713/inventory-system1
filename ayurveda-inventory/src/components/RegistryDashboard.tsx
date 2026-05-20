@@ -453,17 +453,6 @@ export default function AyurVaidyaRegistry() {
       {/* ── Main ───────────────────────────────────────────────── */}
       <div className="main registry-main">
 
-        {/* Topbar */}
-        <div className="registry-head">
-          <div>
-            <h1>Item Registry</h1>
-          </div>
-          <div className="registry-head-actions">
-            <button className="btn" onClick={exportRegistryRows}>Export</button>
-            <button className="btn btn-primary" onClick={() => setDetailItem("new")}>+ Add New Item</button>
-          </div>
-        </div>
-
         <FilterBar
           filters={filters}
           setFilters={setFilters}
@@ -472,6 +461,8 @@ export default function AyurVaidyaRegistry() {
           setStatus={setStatus}
           clearAllFilters={clearAllFilters}
           totalCount={items.length}
+          onExport={exportRegistryRows}
+          onAddItem={() => setDetailItem("new")}
         />
 
         <div className="registry-table-card">

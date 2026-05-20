@@ -12,7 +12,7 @@ export default function FilterBar({
   clearAllFilters,
   totalCount,
   onExport,
-  onImport,
+  onAddItem,
 }: {
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
@@ -22,7 +22,7 @@ export default function FilterBar({
   clearAllFilters: () => void;
   totalCount: number;
   onExport?: () => void;
-  onImport?: () => void;
+  onAddItem?: () => void;
 }) {
   const chipClass = (type: string, activeWhen: boolean) =>
     `chip${activeWhen ? ` active ${type}` : ""}`;
@@ -49,12 +49,12 @@ export default function FilterBar({
           />
         </div>
 
-        {onExport ? <button className="btn" onClick={onExport}>Export</button> : null}
-        {onImport ? <button className="btn" onClick={onImport}>Import</button> : null}
-
         <div className="tot-lbl">
           Total: <strong>{totalCount}</strong>
         </div>
+
+        {onExport ? <button className="btn" onClick={onExport}>Export</button> : null}
+        {onAddItem ? <button className="btn btn-primary" onClick={onAddItem}>+ Add New Item</button> : null}
       </div>
 
       {filters.bannerMsg ? (
