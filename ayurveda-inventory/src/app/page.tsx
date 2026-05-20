@@ -9,8 +9,11 @@ const AllItemsDashboard = dynamic(() => import("../components/AllItemsDashboard"
 const RegistryDashboard = dynamic(() => import("../components/RegistryDashboard"), { ssr: false });
 const AyurVaidyaGRN = dynamic(() => import("../components/AyurVaidyaGRN"), { ssr: false });
 const AyurVaidyaStockIssue = dynamic(() => import("../components/AyurVaidyaStockIssue"), { ssr: false });
+const AlertsDashboard = dynamic(() => import("../components/insights/AlertsDashboard"), { ssr: false });
+const ReportsDashboard = dynamic(() => import("../components/insights/ReportsDashboard"), { ssr: false });
+const AIAssistant = dynamic(() => import("../components/insights/AIAssistant"), { ssr: false });
 
-type ActiveTab = "ALL" | "CAPEX" | "OPEX" | "REG" | "GRN" | "ISS";
+type ActiveTab = "ALL" | "CAPEX" | "OPEX" | "REG" | "GRN" | "ISS" | "ALERTS" | "REPORTS" | "AI";
 
 type DashboardSummary = {
   capexCount?: number;
@@ -29,6 +32,12 @@ export default function Home() {
     ? "Stock Inward (GRN)"
     : activeTab === "ISS"
     ? "Stock Issue"
+    : activeTab === "ALERTS"
+    ? "Alerts"
+    : activeTab === "REPORTS"
+    ? "Reports"
+    : activeTab === "AI"
+    ? "AI Assistant"
     : activeTab === "OPEX"
     ? "OPEX stock"
     : activeTab === "CAPEX"
@@ -36,6 +45,14 @@ export default function Home() {
     : activeTab === "REG"
     ? "Item Registry"
     : "Overview";
+
+  const pageTitle = activeTab === "ALERTS"
+    ? "Alerts"
+    : activeTab === "REPORTS"
+    ? "Reports"
+    : activeTab === "AI"
+    ? "AI Assistant"
+    : "Dashboard";
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -106,7 +123,7 @@ export default function Home() {
         <nav>
           <div className="nav-block">
             <div className="nav-label">Main</div>
-            <div className={`nav-item ${activeTab !== "REG" && activeTab !== "GRN" && activeTab !== "ISS" ? "active" : ""}`} onClick={() => setActiveTab("CAPEX")}><div className="nav-icon">D</div> Dashboard</div>
+            <div className={`nav-item ${activeTab === "ALL" || activeTab === "CAPEX" || activeTab === "OPEX" ? "active" : ""}`} onClick={() => setActiveTab("CAPEX")}><div className="nav-icon">D</div> Dashboard</div>
             <div className={`nav-item ${activeTab === "REG" ? "active" : ""}`} onClick={() => setActiveTab("REG")}><div className="nav-icon">R</div> Item Registry</div>
             <div className={`nav-item ${activeTab === "GRN" && grnView === "grn" ? "active" : ""}`} onClick={() => { setActiveTab("GRN"); setGrnView("grn"); }}><div className="nav-icon">In</div> Stock Inward</div>
             <div className={`nav-item ${activeTab === "GRN" && grnView === "qr" ? "active" : ""}`} onClick={() => { setActiveTab("GRN"); setGrnView("qr"); }}><div className="nav-icon">QR</div> QR Generator</div>
@@ -115,9 +132,9 @@ export default function Home() {
 
           <div className="nav-block">
             <div className="nav-label">Insights</div>
-            <div className="nav-item"><div className="nav-icon">!</div> Alerts <span className="nav-chip">{summary?.activeAlerts ?? 0}</span></div>
-            <div className="nav-item"><div className="nav-icon">=</div> Reports</div>
-            <div className="nav-item"><div className="nav-icon">*</div> AI Assistant</div>
+            <div className={`nav-item ${activeTab === "ALERTS" ? "active" : ""}`} onClick={() => setActiveTab("ALERTS")}><div className="nav-icon">!</div> Alerts <span className="nav-chip">{summary?.activeAlerts ?? 0}</span></div>
+            <div className={`nav-item ${activeTab === "REPORTS" ? "active" : ""}`} onClick={() => setActiveTab("REPORTS")}><div className="nav-icon">=</div> Reports</div>
+            <div className={`nav-item ${activeTab === "AI" ? "active" : ""}`} onClick={() => setActiveTab("AI")}><div className="nav-icon">*</div> AI Assistant</div>
           </div>
 
           <div className="nav-block">
@@ -142,7 +159,7 @@ export default function Home() {
       <div className="main">
         <header className="topbar">
           <div className="topbar-left">
-            <div className="page-title">Dashboard</div>
+            <div className="page-title">{pageTitle}</div>
             <div className="breadcrumb">/ <span>{breadcrumbLabel}</span></div>
           </div>
           <div className="topbar-right">
@@ -156,7 +173,7 @@ export default function Home() {
           </div>
         </header>
 
-        {activeTab !== "GRN" && activeTab !== "REG" && (
+        {activeTab !== "GRN" && activeTab !== "REG" && activeTab !== "ALERTS" && activeTab !== "REPORTS" && activeTab !== "AI" && (
           <div className="tab-bar">
             {activeTab === "ISS" ? (
               <div className="tab active" style={{ flex: 1, textAlign: "center" }}>Stock Issue</div>
@@ -173,6 +190,12 @@ export default function Home() {
         <div className="content">
           {activeTab === "ISS" ? (
             <AyurVaidyaStockIssue />
+          ) : activeTab === "ALERTS" ? (
+            <AlertsDashboard />
+          ) : activeTab === "REPORTS" ? (
+            <ReportsDashboard />
+          ) : activeTab === "AI" ? (
+            <AIAssistant />
           ) : activeTab === "GRN" ? (
             <AyurVaidyaGRN grnView={grnView} />
           ) : activeTab === "REG" ? (
