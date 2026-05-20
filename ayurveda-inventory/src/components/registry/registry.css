@@ -283,8 +283,8 @@ tbody tr:hover .action-cell{opacity:1}
 .twrap col.cat { width: 78px; }
 .twrap col.stock { width: 130px; }
 .twrap col.exp { width: 240px; }
-.twrap col.dept { width: 86px; }
-.twrap col.act { width: 160px; }
+.twrap col.dept { width: 60px; }
+.twrap col.act { width: 216px; }
 
 .twrap thead tr {
   position: sticky;
@@ -456,12 +456,13 @@ tbody tr:hover .action-cell{opacity:1}
 
 .row-acts {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .irow:hover .row-acts {
@@ -473,8 +474,9 @@ tbody tr:hover .action-cell{opacity:1}
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 8px;
-  border-radius: 4px;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 6px;
   font-size: 10.5px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -482,6 +484,7 @@ tbody tr:hover .action-cell{opacity:1}
   cursor: pointer;
   font-family: var(--sans);
   transition: all 0.11s;
+  line-height: 1;
 }
 
 .ra:hover {
@@ -512,13 +515,13 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .ra.icon-only {
-  width: 28px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   padding: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
 }
-
-
 
 .ra:disabled {
   opacity: 0.45;
@@ -709,9 +712,9 @@ tbody tr:hover .action-cell{opacity:1}
 .twrap col.name { width: 27.8%; }
 .twrap col.cat { width: 9%; }
 .twrap col.stock { width: 15%; }
-.twrap col.exp { width: 24%; }
+.twrap col.exp { width: 22%; }
 .twrap col.dept { width: 8%; }
-.twrap col.act { width: 10%; }
+.twrap col.act { width: 12%; }
 
 .twrap table {
   font-size: 12px;
@@ -1026,7 +1029,11 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .registry-table-card .row-acts .ra{
-  min-width:34px;
+  min-width:48px;
+}
+
+.registry-table-card .row-acts .ra.icon-only{
+  min-width:32px;
 }
 
 .registry-table-card .subcat-badge{
