@@ -691,7 +691,7 @@ export default function DetailPanel({
       </div>
 
       <div className="dp-section ni-section">
-        <div className="dp-section-title">Opening stock inward details</div>
+        <div className="dp-section-title">Invoice details</div>
         <div className="ni-grid two">
           <label className="ni-field">
             <span>Invoice number</span>

@@ -635,23 +635,43 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Item code is required' }, { status: 400 })
     }
 
-    const updated = await prisma.$queryRawUnsafe(
-      `
-        UPDATE items
-        SET is_active = false,
-            updated_at = NOW()
-        WHERE item_code = $1
-          AND is_active = true
-        RETURNING item_code
-      `,
+    // Look up the item_id first
+    const itemRows = await prisma.$queryRawUnsafe(
+      `SELECT item_id FROM items WHERE item_code = $1 LIMIT 1`,
       code
     ) as Array<Record<string, unknown>>
 
-    if (!updated.length) {
+    if (!itemRows.length) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ ok: true, itemCode: updated[0].item_code })
+    const itemId = Number(itemRows[0].item_id)
+
+    // Hard delete in correct FK order inside a transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete alerts (references item_id, batch_id, amc_id)
+      await tx.$queryRawUnsafe(`DELETE FROM alerts WHERE item_id = $1`, itemId)
+
+      // 2. Delete disposal logs (references item_id, batch_id)
+      await tx.$queryRawUnsafe(`DELETE FROM disposal_log WHERE item_id = $1`, itemId)
+
+      // 3. Delete stock issues (references item_id, batch_id)
+      await tx.$queryRawUnsafe(`DELETE FROM stock_issues WHERE item_id = $1`, itemId)
+
+      // 4. Delete AMC contracts (references item_id, batch_id, grn_id)
+      await tx.$queryRawUnsafe(`DELETE FROM amc_contracts WHERE item_id = $1`, itemId)
+
+      // 5. Delete item batches (references item_id, grn_id)
+      await tx.$queryRawUnsafe(`DELETE FROM item_batches WHERE item_id = $1`, itemId)
+
+      // 6. Delete GRN entries (references item_id)
+      await tx.$queryRawUnsafe(`DELETE FROM grn_entries WHERE item_id = $1`, itemId)
+
+      // 7. Finally delete the item itself
+      await tx.$queryRawUnsafe(`DELETE FROM items WHERE item_id = $1`, itemId)
+    })
+
+    return NextResponse.json({ ok: true, itemCode: code })
   } catch (err) {
     console.error('Error deleting registry item:', err)
     return NextResponse.json({ error: 'Could not delete item' }, { status: 500 })

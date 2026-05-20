@@ -59,7 +59,6 @@ export default function AttentionCard({ activeAlerts = 0, expiring = [], lowStoc
           <div className="danger-notice">Dispose per AYUSH guidelines immediately. Log disposal in system.</div>
         </div>
       </div>
-      <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-dim)' }}>Active alerts: {activeAlerts}</div>
     </div>
   );
 }

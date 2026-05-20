@@ -23,16 +23,16 @@ export default function LowStockCard({ rows }: Props) {
         <div className="stock-list">
           {fallback.map((r, i) => (
             <div className="stock-row" key={i}>
-              <div className="stock-top"><span className="stock-name">{r[0]}</span><span className="stock-nums">{r[1]}</span><span className={`pill ${r[3]}`} style={{ marginLeft: 6 }}>{r[2]==='100%'?'Healthy':(i<2?'Critical':'Low')}</span></div>
+              <div className="stock-top"><span className="stock-name">{r[0]}</span><span className="stock-nums">{r[1]}</span><span className={`pill ${r[3]}`} style={{ marginLeft: 6 }}>{r[3]==='pill-red'?'Critical':r[3]==='pill-amber'?'Low':'Healthy'}</span></div>
               <div className="stock-track"><div className="stock-fill" style={{ width: r[2], background: r[3] === 'pill-red' ? 'var(--red)' : r[3]==='pill-amber' ? 'var(--amber)' : 'var(--green)' }}></div></div>
             </div>
           ))}
         </div>
       </div>
       <div className="card-foot">
-        <span className="foot-txt">Critical &nbsp;<strong style={{ color: 'var(--red)' }}>{fallback.slice(0,2).length}</strong></span>
-        <span className="foot-txt">Low &nbsp;<strong style={{ color: 'var(--amber)' }}>{Math.max(0, fallback.length-3)}</strong></span>
-        <span className="foot-txt">Healthy &nbsp;<strong style={{ color: 'var(--green)' }}>{fallback.filter(r=>r[2]==='100%').length}</strong></span>
+        <span className="foot-txt">Critical &nbsp;<strong style={{ color: 'var(--red)' }}>{fallback.filter(r=>r[3]==='pill-red').length}</strong></span>
+        <span className="foot-txt">Low &nbsp;<strong style={{ color: 'var(--amber)' }}>{fallback.filter(r=>r[3]==='pill-amber').length}</strong></span>
+        <span className="foot-txt">Healthy &nbsp;<strong style={{ color: 'var(--green)' }}>{fallback.filter(r=>r[3]==='pill-green').length}</strong></span>
       </div>
     </div>
   );

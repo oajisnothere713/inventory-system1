@@ -46,11 +46,30 @@ export default function AllItemsDashboard() {
       <AllItemsDashboardSkeleton />
     ) : (
       <div className="all-items-root">
-        <StatStrip totalItems={data.totalItems ?? 0} capexCount={data.capexCount ?? 0} opexCount={data.opexCount ?? 0} activeAlerts={data.activeAlerts ?? 0} grnThisMonth={data.grnThisMonth ?? 0} />
+        <StatStrip
+          totalItems={data.totalItems ?? 0}
+          capexCount={data.capexCount ?? 0}
+          opexCount={data.opexCount ?? 0}
+          activeAlerts={data.activeAlerts ?? 0}
+          grnThisMonth={data.grnThisMonth ?? 0}
+          expiryAlerts={data.expiring?.length ?? 0}
+          lowStockAlerts={data.lowStock?.length ?? 0}
+          amcAlerts={data.amcDue?.length ?? 0}
+        />
         <AttentionCard activeAlerts={data.activeAlerts ?? 0} expiring={data.expiring ?? []} lowStock={data.lowStock ?? []} amcDue={data.amcDue ?? []} expiredCount={data.expiredCount ?? 0} />
 
         <div className="bottom-row">
-          <InventoryHealthPanel totalItems={data.totalItems ?? 0} capexCount={data.capexCount ?? 0} opexCount={data.opexCount ?? 0} attentionCount={(data.expiring?.length ?? 0) + (data.lowStock?.length ?? 0) + (data.amcDue?.length ?? 0)} expiredCount={data.expiredCount ?? 0} />
+          <InventoryHealthPanel
+            totalItems={data.totalItems ?? 0}
+            capexCount={data.capexCount ?? 0}
+            opexCount={data.opexCount ?? 0}
+            attentionCount={(data.expiring?.length ?? 0) + (data.lowStock?.length ?? 0) + (data.amcDue?.length ?? 0)}
+            expiredCount={data.expiredCount ?? 0}
+            opexLowStock={data.lowStock?.length ?? 0}
+            opexExpiring={data.expiring?.length ?? 0}
+            opexExpired={data.expiredCount ?? 0}
+            capexAttention={data.amcDue?.length ?? 0}
+          />
           <ActivityPanel recentGrns={data.recentGrns ?? []} />
         </div>
 

@@ -7,7 +7,6 @@ import ExpiryPipelineCard from "./opex/ExpiryPipelineCard";
 import LowStockCard from "./opex/LowStockCard";
 import AnomalyTrackerCard from "./opex/AnomalyTrackerCard";
 import WastageCard from "./opex/WastageCard";
-import RecentAdditionsCard from "./opex/RecentAdditionsCard";
 import { useEffect, useState } from 'react';
 
 type OpexItem = {
@@ -18,6 +17,7 @@ type OpexItem = {
   stock: number;
   min: number;
   max: number | null;
+  unit: string;
   expiry: string | null;
   dept: string | null;
   supplier: string | null;
@@ -69,11 +69,8 @@ export default function OpexDashboard(){
     return diff >= 0 && diff <= 30
   }).length
   const lowStock = items.filter(i => i.stock <= i.min).length
-  const addedThisMonth = items.filter(i => i.createdAt && new Date(i.createdAt).getMonth() === new Date().getMonth() && new Date(i.createdAt).getFullYear() === new Date().getFullYear()).length
-  const recentItems = items
-    .filter((item) => item.createdAt)
-    .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())
-    .slice(0, 5)
+  const grnThisMonth = items.filter(i => i.createdAt && new Date(i.createdAt).getMonth() === new Date().getMonth() && new Date(i.createdAt).getFullYear() === new Date().getFullYear()).length
+  const issuesThisMonth = 0;
 
   // expiry buckets based on earliest expiry date
   const days = (d?: string | null) => {
@@ -91,28 +88,32 @@ export default function OpexDashboard(){
     else buckets.gt90++
   })
 
-  // low stock rows: pick items where stock <= min (or lowest pct)
+  // low stock rows: only items with a real minimum set, sorted by how depleted they are
+  const fmt = (n:number) => n.toLocaleString()
   const lowRows = items
-    .map(i => ({ name: i.name, avail: i.stock, min: i.min, pct: i.min ? Math.round((i.stock / i.min) * 100) : 100 }))
+    .filter(i => i.min > 0)
+    .map(i => ({ name: i.name, avail: i.stock, min: i.min, unit: i.unit || '', pct: Math.round((i.stock / i.min) * 100) }))
     .sort((a,b)=> (a.pct - b.pct))
     .slice(0,6)
-    .map(r => [r.name, `${r.avail}/${r.min}`, `${Math.max(0, Math.min(100, 100 - r.pct))}%`, r.pct <= 20 ? 'pill-red' : r.pct <= 50 ? 'pill-amber' : 'pill-green'] as string[])
+    .map(r => [r.name, `${fmt(r.avail)}/${fmt(r.min)} ${r.unit}`.trim(), `${Math.min(100, r.pct)}%`, r.pct <= 30 ? 'pill-red' : r.pct < 100 ? 'pill-amber' : 'pill-green'] as string[])
 
   return (
     <>
       <SectionHead badge="OPEX" title="Operating stock — medicines & consumables" sub="Regular purchase · Expiry tracked · Stock replenished" />
 
+      {/* ROW 1: Donut + 3 KPIs */}
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr', marginBottom: 12 }}>
         <DonutKpiCard total={total} medicines={medicines} consumables={consumables} />
-        <KPICards total={total} expiring30Days={expiring30Days} lowStock={lowStock} />
-        <RecentAdditionsCard items={recentItems} addedThisMonth={addedThisMonth} medicines={medicines} consumables={consumables} />
+        <KPICards expiring30Days={expiring30Days} lowStock={lowStock} grnThisMonth={grnThisMonth} />
       </div>
 
+      {/* ROW 2: Expiry pipeline + Low stock */}
       <div className="grid g-2" style={{ marginBottom: 12 }}>
         <ExpiryPipelineCard buckets={buckets} total={total} />
         <LowStockCard rows={lowRows} />
       </div>
 
+      {/* ROW 3: Anomaly tracker + Wastage */}
       <div className="grid g-2-1" style={{ marginBottom: 0 }}>
         <AnomalyTrackerCard />
         <WastageCard />

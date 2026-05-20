@@ -23,11 +23,33 @@ export default function ExpiryPipelineCard({ buckets, total = 0 }: Props) {
       }
       try {
         const Chart = (window as any).Chart;
+        const TT = {backgroundColor:'#fff',borderColor:'#dce8de',borderWidth:1,titleColor:'#0d1f12',bodyColor:'#3d6148',padding:10,cornerRadius:8};
         if (canvasRef.current) {
           chartInstance = new Chart(canvasRef.current as HTMLCanvasElement, {
             type: 'bar',
-            data: { labels: ['< 30 days', '< 60 days', '< 90 days', '> 90 days'], datasets: [{ data: [(buckets?.lt30 ?? 0), (buckets?.lt60 ?? 0), (buckets?.lt90 ?? 0), (buckets?.gt90 ?? 0)], backgroundColor: ['#B91C1C', '#92400E', '#78600A', '#1A6B3C'], borderRadius: 4, borderSkipped: false, barPercentage: 0.6, categoryPercentage: 0.7 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } }
+            data: {
+              labels: ['< 30 days', '< 60 days', '< 90 days', '> 90 days'],
+              datasets: [{
+                data: [(buckets?.lt30 ?? 0), (buckets?.lt60 ?? 0), (buckets?.lt90 ?? 0), (buckets?.gt90 ?? 0)],
+                backgroundColor: ['#B91C1C', '#92400E', '#78600A', '#1A6B3C'],
+                borderRadius: {topLeft:4,topRight:4,bottomLeft:0,bottomRight:0},
+                borderSkipped: false,
+                barPercentage: 0.6,
+                categoryPercentage: 0.7
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: { ...TT, callbacks: { label: (ctx:any) => ` ${ctx.parsed.y} items` } }
+              },
+              scales: {
+                x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 10.5 } } },
+                y: { beginAtZero: true, grid: { color: '#dce8de', lineWidth: 0.5 }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 10, family: "'DM Mono',monospace" } } }
+              }
+            }
           });
         }
       } catch (e) {
