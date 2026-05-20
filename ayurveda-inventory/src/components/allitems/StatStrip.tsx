@@ -17,7 +17,6 @@ type Props = {
   alertBreakdown?: AlertBreakdown;
   grnThisMonth?: number;
   issuesThisMonth?: number;
-  valueReceived?: string;
 };
 
 const emptyBreakdown = (): AlertBreakdown => ({
@@ -37,7 +36,6 @@ export default function StatStrip({
   alertBreakdown,
   grnThisMonth = 0,
   issuesThisMonth = 0,
-  valueReceived = "",
 }: Props) {
   const breakdown = alertBreakdown ?? emptyBreakdown();
   const partsSum =
@@ -84,7 +82,6 @@ export default function StatStrip({
         <div className="stat-lbl">GRN entries this month</div>
         <div className="tag-row">
           <span className="tag tag-green">{issuesThisMonth} issues</span>
-          {valueReceived && <span className="tag tag-slate">{valueReceived} received</span>}
         </div>
       </div>
     </div>
