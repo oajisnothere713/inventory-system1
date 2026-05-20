@@ -152,9 +152,9 @@ export default function Home() {
         </nav>
 
         <div className="sidebar-user">
-          <div className="avatar">RK</div>
+          <div className="avatar">PA</div>
           <div className="user-info">
-            <div className="user-name">Ramesh Kumar</div>
+            <div className="user-name">Prashant Agarwal</div>
             <div className="user-role">Store Manager</div>
           </div>
         </div>
