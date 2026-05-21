@@ -356,6 +356,7 @@ model GrnEntry {
   totalValue       Decimal?      @map("total_value") @db.Decimal(12, 2)
   storeLocation    String?       @map("store_location") @db.VarChar(200)
   receivedBy       Int           @map("received_by")
+  receivedByName   String?       @map("received_by_name") @db.VarChar(200)
   verifiedBy       Int?          @map("verified_by")
   qualityStatus    QualityStatus @default(accepted) @map("quality_status")
   notes            String?       @db.Text

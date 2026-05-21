@@ -63,12 +63,21 @@ export type DashboardAmcDue = {
   item?: { itemId?: string; itemName?: string };
 };
 
+export type DashboardExpiredBatch = {
+  batchId: string;
+  batchNumber?: string;
+  expiryDate?: string;
+  quantityAvailable?: string;
+  item?: { itemId?: string; itemName?: string };
+};
+
 const PREVIEW_LIMIT = 6;
 
 export function buildDashboardAttentionPreviews(items: Item[]) {
   const expiring: DashboardExpiringBatch[] = [];
   const lowStock: DashboardLowStockItem[] = [];
   const amcDue: DashboardAmcDue[] = [];
+  const expired: DashboardExpiredBatch[] = [];
 
   for (const item of items) {
     if (isLowStock(item) && lowStock.length < PREVIEW_LIMIT) {
@@ -86,6 +95,15 @@ export function buildDashboardAttentionPreviews(items: Item[]) {
           batchId: `${item.id}:${batch.batch}`,
           batchNumber: batch.batch,
           expiryDate: batch.expiry ?? undefined,
+          quantityAvailable: String(batch.stock ?? 0),
+          item: { itemId: item.id, itemName: item.name },
+        });
+      }
+      if ((status === "expired" || status === "amc_expired") && expired.length < PREVIEW_LIMIT) {
+        expired.push({
+          batchId: `${item.id}:${batch.batch}`,
+          batchNumber: batch.batch,
+          expiryDate: batch.expiry ?? batch.amcExpiry ?? undefined,
           quantityAvailable: String(batch.stock ?? 0),
           item: { itemId: item.id, itemName: item.name },
         });
@@ -112,5 +130,5 @@ export function buildDashboardAttentionPreviews(items: Item[]) {
     return da - db;
   });
 
-  return { expiring, lowStock, amcDue };
+  return { expiring, lowStock, amcDue, expired };
 }

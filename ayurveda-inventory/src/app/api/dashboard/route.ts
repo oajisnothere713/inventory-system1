@@ -32,7 +32,7 @@ export async function GET() {
 
     const registryItems = registryRows.map(mapRegistryRow)
     const alertBreakdown = getOperationalAlertBreakdown(registryItems)
-    const { expiring, lowStock, amcDue } = buildDashboardAttentionPreviews(registryItems)
+    const { expiring, lowStock, amcDue, expired } = buildDashboardAttentionPreviews(registryItems)
 
     const serialized = recentGrns.map((g: any) => ({
       ...g,
@@ -60,11 +60,12 @@ export async function GET() {
       grnThisMonth,
       issuesThisMonth,
       valueReceived,
-      expiredCount: alertBreakdown.expired,
+      expiredCount: alertBreakdown.expired + alertBreakdown.amcExpired,
       recentGrns: serialized,
       expiring,
       lowStock,
       amcDue,
+      expired,
     })
   } catch (err: any) {
     console.error('GET /api/dashboard error:', err)

@@ -286,7 +286,7 @@ export default function AyurVaidyaGRN({ grnView }: { grnView?: 'grn' | 'qr' }) {
               qty: `${r.quantityReceived || form.qty} ${r.unit || form.unit}`,
               supplier: (r.supplier && r.supplier.supplierName) || (form.supplierName || ''),
               invoice: r.invoiceNumber || form.invoiceNo || '',
-              by: (r.receiver && r.receiver.fullName) || (form.receivedBy || ''),
+              by: r.received_by_name || (r.receiver && r.receiver.fullName) || (form.receivedBy || ''),
             }
             setGrnHistory((prev) => [row, ...prev].slice(0, 200))
           } catch (e) {}

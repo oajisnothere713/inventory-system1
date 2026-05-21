@@ -35,6 +35,7 @@ type DashboardPayload = {
   lowStock?: { itemId: number; itemName?: string; totalAvailable: number }[]
   amcDue?: { amcId: number; amcNumber?: string; contractEnd?: string; item?: { itemId?: number; itemName?: string } }[]
   expiredCount?: number
+  expired?: { batchId: string | number; batchNumber?: string; expiryDate?: string; quantityAvailable?: string; item?: { itemId?: string | number; itemName?: string } }[]
 }
 
 export default function AllItemsDashboard() {
@@ -66,7 +67,16 @@ export default function AllItemsDashboard() {
           grnThisMonth={data.grnThisMonth ?? 0}
           issuesThisMonth={data.issuesThisMonth ?? 0}
         />
-        <AttentionCard expiring={data.expiring ?? []} lowStock={data.lowStock ?? []} amcDue={data.amcDue ?? []} expiredCount={data.expiredCount ?? 0} />
+        <AttentionCard 
+          expiring={data.expiring ?? []} 
+          expiringCount={data.alertBreakdown?.expiring ?? 0}
+          lowStock={data.lowStock ?? []} 
+          lowStockCount={data.alertBreakdown?.lowStock ?? 0}
+          amcDue={data.amcDue ?? []} 
+          amcDueCount={data.alertBreakdown?.amcDue ?? 0}
+          expiredCount={data.expiredCount ?? 0} 
+          expired={data.expired ?? []} 
+        />
 
         <div className="bottom-row">
           <InventoryHealthPanel
