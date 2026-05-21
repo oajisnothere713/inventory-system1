@@ -32,7 +32,7 @@ export async function GET() {
         FROM item_batches ib2 WHERE ib2.item_id = i.item_id
       ) b ON true
       LEFT JOIN LATERAL (
-        SELECT amc_number, contract_end FROM amc_contracts ac WHERE ac.item_id = i.item_id ORDER BY ac.contract_end DESC LIMIT 1
+        SELECT amc_number, contract_end FROM amc_contracts ac WHERE ac.item_id = i.item_id ORDER BY ac.contract_end ASC LIMIT 1
       ) a ON true
       WHERE i.is_active = true AND i.category = 'CAPEX'
       ORDER BY i.item_name ASC;
