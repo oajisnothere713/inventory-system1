@@ -13,49 +13,117 @@ export default function DonutCard({ total, devices, electrical, groups }: Props)
   const devicesOffset = circumference * 0.25
   const electricalOffset = -(devicesArc - devicesOffset)
 
+  // Colors from the "Clinical Trust" image
+  const colorDevices = "#29A073"; // Deep Teal
+  const colorElectrical = "#C67D28"; // Earthy Orange
+  const colorBg = "#F1F5F9"; 
+
   return (
-    <div className="card">
-      <div className="card-head"><span className="card-title">Asset breakdown</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div className="legend-item"><div className="legend-sq" style={{ background: 'var(--blue)' }}></div>Medical device</div>
-            <div className="legend-item"><div className="legend-sq" style={{ background: 'var(--green)' }}></div>Electrical</div>
-          </div>
-          <a className="view-link" href="#" onClick={(e) => { e.preventDefault(); try { sessionStorage.setItem('registryDeepLink', JSON.stringify({ category: 'CAPEX' })); window.dispatchEvent(new CustomEvent('open-registry')); } catch (err){} }}>
-            View all →
-          </a>
-        </div>
+    <div className="card donut-card-enhanced" style={{ padding: 0, backgroundColor: 'white', border: '1px solid var(--border)' }}>
+      <style>{`
+        .donut-card-enhanced .hbar-row {
+          padding: 4px 8px;
+          margin: -4px -8px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+        .donut-card-enhanced .hbar-row:hover {
+          background: rgba(0,0,0,0.03);
+          transform: translateX(4px);
+        }
+        .donut-card-enhanced .hbar-fill {
+          transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+          border-radius: 4px;
+        }
+        .donut-card-enhanced .hbar-track {
+          border-radius: 4px;
+        }
+        .donut-card-enhanced .leg-sq,
+        .donut-card-enhanced .legend-sq {
+          border-radius: 4px;
+        }
+        .premium-box {
+          background: #F8FAFC;
+          border: 1px solid #E2E8F0;
+          border-radius: 12px;
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+      `}</style>
+      <div className="card-head" style={{ borderBottom: '1px solid #F1F5F9', padding: '16px 20px' }}>
+        <span className="card-title" style={{ fontSize: '15px', color: '#0F172A' }}>Asset Breakdown</span>
+        <a className="view-link" href="#" style={{ fontSize: '12px', fontWeight: 500, color: '#64748B' }} onClick={(e) => { e.preventDefault(); try { sessionStorage.setItem('registryDeepLink', JSON.stringify({ category: 'CAPEX' })); window.dispatchEvent(new CustomEvent('open-registry')); } catch (err){} }}>
+          View registry →
+        </a>
       </div>
-      <div className="card-body" style={{ flexDirection: 'row', gap: 24, alignItems: 'center', padding: '18px 20px' }}>
-        <div style={{ flexShrink: 0 }}>
-          <div className="donut-row" style={{ marginBottom: 0, gap: 20 }}>
-            <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-              <circle cx="60" cy="60" r={radius} fill="none" stroke="#e8eee9" strokeWidth="14"/>
-              <circle cx="60" cy="60" r={radius} fill="none" stroke="#185FA5" strokeWidth="14" strokeDasharray={`${devicesArc} ${circumference - devicesArc}`} strokeDashoffset={`${devicesOffset}`}/>
-              <circle cx="60" cy="60" r={radius} fill="none" stroke="#1A6B3C" strokeWidth="14" strokeDasharray={`${electricalArc} ${circumference - electricalArc}`} strokeDashoffset={`${electricalOffset}`}/>
-              <text x="60" y="56" textAnchor="middle" fontSize="22" fontWeight={500} fill="#0d1f12" fontFamily="'DM Mono',monospace">{total}</text>
-              <text x="60" y="72" textAnchor="middle" fontSize={10} fill="#7a9982" fontFamily="'Sora',sans-serif">total</text>
+      <div className="card-body" style={{ flexDirection: 'row', gap: 32, alignItems: 'stretch', padding: '24px 20px' }}>
+        
+        {/* Left Side: Premium Donut Box */}
+        <div className="premium-box" style={{ flexShrink: 0, width: 220 }}>
+          <div style={{ position: 'relative', width: 120, height: 120 }}>
+            <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="60" cy="60" r={radius} fill="none" stroke={colorBg} strokeWidth="14"/>
+              <circle cx="60" cy="60" r={radius} fill="none" stroke={colorDevices} strokeWidth="14" strokeDasharray={`${devicesArc} ${circumference}`} strokeDashoffset={0} strokeLinecap="butt"/>
+              <circle cx="60" cy="60" r={radius} fill="none" stroke={colorElectrical} strokeWidth="14" strokeDasharray={`${electricalArc} ${circumference}`} strokeDashoffset={-devicesArc} strokeLinecap="butt"/>
             </svg>
-            <div className="leg-block" style={{ gap: 12 }}>
-              <div className="leg-item"><div className="leg-sq" style={{ background: '#185FA5' }}></div>Medical devices <span className="leg-val">{devices}<span className="leg-pct">{pct(devices)}%</span></span></div>
-              <div className="leg-item"><div className="leg-sq" style={{ background: '#1A6B3C' }}></div>Electrical <span className="leg-val">{electrical}<span className="leg-pct">{pct(electrical)}%</span></span></div>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px', fontWeight: 600, color: '#0F172A', lineHeight: 1, fontFamily: 'var(--sans)' }}>{total}</span>
+              <span style={{ fontSize: '10px', fontWeight: 500, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}>Assets</span>
+            </div>
+          </div>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#475569', fontWeight: 500 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: colorDevices }}></span> Medical
+              </span>
+              <span style={{ fontWeight: 600, color: '#0F172A' }}>{devices} <span style={{ color: '#94A3B8', fontWeight: 400, marginLeft: 2 }}>({pct(devices)}%)</span></span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#475569', fontWeight: 500 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: colorElectrical }}></span> Electrical
+              </span>
+              <span style={{ fontWeight: 600, color: '#0F172A' }}>{electrical} <span style={{ color: '#94A3B8', fontWeight: 400, marginLeft: 2 }}>({pct(electrical)}%)</span></span>
             </div>
           </div>
         </div>
 
-        <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', flexShrink: 0 }}></div>
-
-        <div style={{ flex: 1 }}>
+        {/* Right Side: Elegant Minimalist Bars */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div className="hbar-list" style={{ gap: 12 }}>
-            {groups.map((g, idx) => (
-              <div key={idx}>
-                {idx === 3 && <div className="section-divider" style={{ margin: '14px 0' }}></div>}
-                <div className="hbar-row" style={{ gap: 4 }}>
-                  <div className="hbar-top"><span className="hbar-name"><span className="hbar-dot" style={{ background: idx < 3 ? 'var(--blue)' : 'var(--green)' }}></span>{g.label}</span><span className="hbar-val">{g.count}</span></div>
-                  <div className="hbar-track" style={{ height: 6 }}><div className="hbar-fill" style={{ width: `${g.pct}%`, background: idx < 3 ? 'var(--blue)' : 'var(--green)' }}></div></div>
+            {groups.map((g, idx) => {
+              const isMedical = idx < 3;
+              const color = isMedical ? colorDevices : colorElectrical;
+              return (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
+                  {idx === 0 && (
+                    <div style={{ marginBottom: 6, fontSize: '11px', fontWeight: 700, color: colorDevices, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                      Medical Devices
+                    </div>
+                  )}
+                  {idx === 3 && (
+                    <div style={{ marginTop: 12, marginBottom: 6, fontSize: '11px', fontWeight: 700, color: colorElectrical, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                      Electrical
+                    </div>
+                  )}
+                  <div className="hbar-row" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 500, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: color }}></span>
+                        {g.label}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', fontFamily: 'var(--sans)' }}>{g.count}</span>
+                    </div>
+                    <div className="hbar-track" style={{ height: 6, width: '100%', background: '#F1F5F9' }}>
+                      <div className="hbar-fill" style={{ width: `${g.pct}%`, height: '100%', background: color }}></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
