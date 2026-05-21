@@ -34,12 +34,8 @@ function toDate(value: unknown) {
 }
 
 function makeSupplierCode(name: string) {
-  return (
-    name
-      .replace(/[^a-z0-9]/gi, "")
-      .toUpperCase()
-      .slice(0, 8) || "SUP"
-  );
+  const base = name.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 5) || "SUP";
+  return base + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
 }
 
 function makeDeptCode(name: string) {
@@ -85,6 +81,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const rows = Array.isArray(body.rows) ? (body.rows as ImportRow[]) : [];
+    const recordedBy = clean(body.recordedBy);
 
     if (!rows.length) {
       return NextResponse.json({ error: "No rows provided" }, { status: 400 });
@@ -107,21 +104,43 @@ export async function POST(req: Request) {
         });
       }
 
-      let systemUser = await tx.user.findFirst({
-        where: { username: "import_user" },
-      });
-
-      if (!systemUser) {
-        systemUser = await tx.user.create({
-          data: {
-            employeeId: "EMP-IMPORT",
-            fullName: "Import User",
-            username: "import_user",
-            passwordHash: "import",
-            role: "store_manager",
-            deptId: systemDept.deptId,
-          },
+      let systemUser;
+      
+      if (recordedBy) {
+        systemUser = await tx.user.findFirst({
+          where: { fullName: { equals: recordedBy, mode: 'insensitive' } },
         });
+
+        if (!systemUser) {
+          const safeUsername = recordedBy.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 50) + '_' + Math.floor(Math.random() * 1000);
+          systemUser = await tx.user.create({
+            data: {
+              employeeId: `EMP-${Math.floor(Math.random() * 100000)}`,
+              fullName: recordedBy,
+              username: safeUsername,
+              passwordHash: "import",
+              role: "store_manager",
+              deptId: systemDept.deptId,
+            },
+          });
+        }
+      } else {
+        systemUser = await tx.user.findFirst({
+          where: { username: "import_user" },
+        });
+
+        if (!systemUser) {
+          systemUser = await tx.user.create({
+            data: {
+              employeeId: "EMP-IMPORT",
+              fullName: "Import User",
+              username: "import_user",
+              passwordHash: "import",
+              role: "store_manager",
+              deptId: systemDept.deptId,
+            },
+          });
+        }
       }
 
       for (let index = 0; index < rows.length; index++) {
