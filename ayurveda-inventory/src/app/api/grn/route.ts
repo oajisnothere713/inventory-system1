@@ -18,7 +18,7 @@ export async function GET() {
         (g.quantity_received::text || ' ' || g.unit) AS qty,
         s.supplier_name AS supplier,
         g.invoice_number AS invoice,
-        u.full_name AS by
+        COALESCE(g.received_by_name, u.full_name) AS by
       FROM grn_entries g
       LEFT JOIN items i ON i.item_id = g.item_id
       LEFT JOIN suppliers s ON s.supplier_id = g.supplier_id
@@ -135,9 +135,9 @@ export async function POST(req: Request) {
 
           // Insert records and RETURNING inserted rows to avoid extra SELECTs
           const grnInsert = (await tx.$queryRaw`
-            INSERT INTO grn_entries (grn_id, grn_number, grn_date, item_id, batch_id, supplier_id, quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number, invoice_date, price_per_unit, total_value, store_location, received_by, stock_before, stock_after, created_at)
-            VALUES (${grnId}, ${grnNumber}, CURRENT_DATE, ${it.itemId}, ${batchId}, ${supId ?? null}, ${receiveQty}, ${finalUnit}, ${batchNo}, ${mfgDate ? new Date(mfgDate) : null}, ${expiryDate ? new Date(expiryDate) : null}, ${invoiceNo ?? ''}, ${invoiceDate ? new Date(invoiceDate) : null}, ${pricePerUnit ?? null}, ${total ?? null}, ${storeLocation ?? ''}, ${recvId}, ${stockBefore}, ${stockBefore + receiveQty}, CURRENT_TIMESTAMP)
-            RETURNING grn_id, grn_number, grn_date, item_id, batch_id, supplier_id, quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number, invoice_date, price_per_unit, total_value, store_location, received_by, stock_before, stock_after, created_at;
+            INSERT INTO grn_entries (grn_id, grn_number, grn_date, item_id, batch_id, supplier_id, quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number, invoice_date, price_per_unit, total_value, store_location, received_by, received_by_name, stock_before, stock_after, created_at)
+            VALUES (${grnId}, ${grnNumber}, CURRENT_DATE, ${it.itemId}, ${batchId}, ${supId ?? null}, ${receiveQty}, ${finalUnit}, ${batchNo}, ${mfgDate ? new Date(mfgDate) : null}, ${expiryDate ? new Date(expiryDate) : null}, ${invoiceNo ?? ''}, ${invoiceDate ? new Date(invoiceDate) : null}, ${pricePerUnit ?? null}, ${total ?? null}, ${storeLocation ?? ''}, ${recvId}, ${receivedBy || null}, ${stockBefore}, ${stockBefore + receiveQty}, CURRENT_TIMESTAMP)
+            RETURNING grn_id, grn_number, grn_date, item_id, batch_id, supplier_id, quantity_received, unit, batch_number, mfg_date, expiry_date, invoice_number, invoice_date, price_per_unit, total_value, store_location, received_by, received_by_name, stock_before, stock_after, created_at;
           `) as any
 
           const batchInsert = (await tx.$queryRaw`
