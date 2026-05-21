@@ -304,7 +304,7 @@ export async function POST(req: Request) {
           const finalBatchNumber = batchNumber || `IMPORT-${grnId}`;
           const expiryDate = toDate(row.expiry || row.expiry_date || row.expiryDate);
           const mfgDate = toDate(row.mfg_date || row.mfgDate);
-          const invoiceNumber = clean(row.invoice || row.invoice_number || row.invoiceNo) || "IMPORT";
+          const invoiceNumber = clean(row.invoice || row.invoice_number || row.invoiceNo || row.invoice_no) || "IMPORT";
           const invoiceDate = toDate(row.invoice_date || row.invoiceDate);
           const storeLocation = clean(row.location || row.store_location || row.storeLocation) || "Imported stock";
           const serialNumbers = clean(row.serial_numbers || row.serialNumbers);
