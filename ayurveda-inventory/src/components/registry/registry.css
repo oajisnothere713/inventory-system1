@@ -567,8 +567,8 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .bc-tog { width: 34px; flex-shrink: 0; }
-.bc-code { width: 72px; flex-shrink: 0; overflow: hidden; }
-.bc-name { width: 230px; flex-shrink: 0; overflow: hidden; }
+.bc-code { width: 164px; flex-shrink: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bc-name { width: 172px; flex-shrink: 0; overflow: hidden; }
 .bc-cat { width: 78px; flex-shrink: 0; overflow: hidden; }
 .bc-stock { width: 148px; flex-shrink: 0; overflow: hidden; }
 .bc-exp { width: 190px; flex-shrink: 0; overflow: hidden; }

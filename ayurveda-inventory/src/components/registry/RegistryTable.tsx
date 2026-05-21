@@ -171,7 +171,6 @@ export default function RegistryTable({
                     <tr className="b-hdr">
                       <td colSpan={8}>
                         <div className="b-hdr-in">
-                          <span className="bc-tog" />
                           <span className="bc-code">{isCapex ? "GRN ref" : "Batch no."}</span>
                           <span className="bc-name">{isCapex ? "Serial numbers" : "Status / tags"}</span>
                           <span className="bc-cat">Qty / Units</span>
@@ -194,7 +193,6 @@ export default function RegistryTable({
                         <tr key={`${item.id}-${batch.batch}-${batchIndex}`} className={`b-row${batchIndex === batches.length - 1 ? " last" : ""}`}>
                           <td colSpan={8}>
                             <div className="b-row-in">
-                              <span className="bc-tog" />
                               <span className="bc-code"><span className="bnum">{isCapex ? batch.grn || batch.batch : batch.batch}</span></span>
                               <span className="bc-name">
                                 {isCapex ? (
@@ -257,7 +255,29 @@ export default function RegistryTable({
                                     )}
                                   </div>
                                 ) : (
-                                  <button className="ra" onClick={(event) => { event.stopPropagation(); onRowClick(item); }}>Details</button>
+                                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <button className="ra" onClick={(event) => { event.stopPropagation(); onRowClick(item); }}>Details</button>
+                                    <button
+                                      className="ra danger"
+                                      onClick={async (event) => {
+                                        event.stopPropagation();
+                                        if (confirm(`Are you sure you want to permanently dispose of this asset and all its associated serial numbers (GRN: ${batch.batch})?`)) {
+                                          try {
+                                            const res = await fetch(`/api/batch?itemId=${encodeURIComponent(item.id)}&batchNumber=${encodeURIComponent(batch.batch)}`, { method: 'DELETE' });
+                                            if (res.ok) {
+                                              window.location.reload();
+                                            } else {
+                                              alert("Failed to dispose asset.");
+                                            }
+                                          } catch (e) {
+                                            alert("Error disposing asset.");
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      Dispose
+                                    </button>
+                                  </div>
                                 )}
                               </span>
                             </div>
