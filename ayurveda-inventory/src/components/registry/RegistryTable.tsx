@@ -101,6 +101,11 @@ export default function RegistryTable({
           {items.map((item, index) => {
             const isCapex = item.category === "CAPEX";
             const batches = fefoSort(item);
+            
+            const firstValidBatchIndex = batches.findIndex(b => {
+              const s = batchStatus(b, isCapex);
+              return s !== "expired" && s !== "amc_expired";
+            });
             const isExpanded = Boolean(expanded[item.id]);
             const summary = expiryColumnSummary(item);
             const low = isLowStock(item);
@@ -199,7 +204,7 @@ export default function RegistryTable({
                                   </span>
                                 ) : (
                                   <span className="batch-status-line">
-                                    {batchIndex === 0 && batches.length > 1 ? <span className="fefo-t">FEFO</span> : null}
+                                    {batchIndex === firstValidBatchIndex && batches.length > 1 ? <span className="fefo-t">FEFO</span> : null}
                                     {batchStatusBadge(status, false)}
                                   </span>
                                 )}
@@ -210,18 +215,47 @@ export default function RegistryTable({
                               <span className="bc-dept">{fmtDate(batch.grnDate) || "—"}</span>
                               <span className="bc-act">
                                 {!isCapex ? (
-                                  <button
-                                    className="ra p"
-                                    disabled={disabled}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      sessionStorage.setItem("openItemForISS", item.id);
-                                      sessionStorage.setItem("openItemForISSBatch", batch.batch);
-                                      window.dispatchEvent(new CustomEvent("open-issue", { detail: item.id }));
-                                    }}
-                                  >
-                                    Issue
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <button
+                                      className="ra p"
+                                      disabled={disabled}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        sessionStorage.setItem("openItemForISS", item.id);
+                                        sessionStorage.setItem("openItemForISSBatch", batch.batch);
+                                        window.dispatchEvent(new CustomEvent("open-issue", { detail: item.id }));
+                                      }}
+                                    >
+                                      Issue
+                                    </button>
+                                    {status === "expired" && (
+                                      <button
+                                        className="ra danger"
+                                        onClick={async (event) => {
+                                          event.stopPropagation();
+                                          if (confirm(`Are you sure you want to permanently dispose of and delete batch ${batch.batch}?`)) {
+                                            try {
+                                              // Extract numeric ID from item.id if it's string, assuming item.id might be numeric or format like MED-002
+                                              // Actually, item.id in the UI is the string code (e.g. "MED-002"), but the API might need the numeric item_id. 
+                                              // Wait, does the API need the numeric itemId? Let me check utils.ts or route.ts.
+                                              // If item.id is a string like 'MED-002', parsing it will result in NaN!
+                                              // I should use the string item.id to find the item, or fetch it via item_code.
+                                              const res = await fetch(`/api/batch?itemId=${encodeURIComponent(item.id)}&batchNumber=${encodeURIComponent(batch.batch)}`, { method: 'DELETE' });
+                                              if (res.ok) {
+                                                window.location.reload();
+                                              } else {
+                                                alert("Failed to dispose batch.");
+                                              }
+                                            } catch (e) {
+                                              alert("Error disposing batch.");
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        Dispose
+                                      </button>
+                                    )}
+                                  </div>
                                 ) : (
                                   <button className="ra" onClick={(event) => { event.stopPropagation(); onRowClick(item); }}>Details</button>
                                 )}

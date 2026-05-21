@@ -573,7 +573,7 @@ tbody tr:hover .action-cell{opacity:1}
 .bc-stock { width: 148px; flex-shrink: 0; overflow: hidden; }
 .bc-exp { width: 190px; flex-shrink: 0; overflow: hidden; }
 .bc-dept { width: 86px; flex-shrink: 0; overflow: hidden; }
-.bc-act { width: 104px; flex-shrink: 0; overflow: hidden; }
+.bc-act { width: 160px; flex-shrink: 0; overflow: hidden; }
 
 .bnum {
   font-family: var(--mono);
