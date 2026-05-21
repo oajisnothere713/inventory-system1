@@ -30,6 +30,11 @@ export default function AyurVaidyaRegistry() {
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Import state
+  const [pendingImportRows, setPendingImportRows] = useState<Record<string, string>[] | null>(null);
+  const [importRecordedBy, setImportRecordedBy] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+
   // Styles are loaded from src/components/registry/registry.css (imported in globals.css)
 
   // Scroll to highlighted row
@@ -366,10 +371,25 @@ export default function AyurVaidyaRegistry() {
           return acc;
         }, {});
       });
+      
+      setPendingImportRows(rows);
+      setImportRecordedBy("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to read file. Please ensure it's a valid CSV with the correct format.");
+    } finally {
+      e.target.value = ""; // reset file input
+    }   
+  };
+
+  const submitImport = async () => {
+    if (!pendingImportRows) return;
+    setIsImporting(true);
+    try {
       const res = await fetch("/api/registry/import", {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ rows: pendingImportRows, recordedBy: importRecordedBy }),
       });
       const data = await res.json();
 
@@ -377,14 +397,15 @@ export default function AyurVaidyaRegistry() {
         alert(data.error || "import failed.");
         return;
       }
-      alert(`Imported ${data.imported ?? rows.length} rows successfully.`);
+      alert(`Imported ${data.imported ?? pendingImportRows.length} rows successfully.`);
       window.location.reload();
     } catch (err) {
       console.error(err);
-      alert("Failed to import file. Please ensure it's a valid CSV with the correct format.");
-    }finally {
-      e.target.value = ""; // reset file input
-    }   
+      alert("Failed to import file.");
+    } finally {
+      setIsImporting(false);
+      setPendingImportRows(null);
+    }
   };
 
   const deleteItem = async (item: Item) => {
@@ -499,6 +520,47 @@ export default function AyurVaidyaRegistry() {
         onClose={() => setDetailItem(null)}
         onItemCreated={() => setRefreshKey((key) => key + 1)}
       />
+
+      {/* ── Import Modal ───────────────────────────────────────── */}
+      {pendingImportRows && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', padding: '24px', borderRadius: '8px', width: '400px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#0f172a' }}>Confirm Import</h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#475569' }}>
+              You are about to import {pendingImportRows.length} items. Please specify who is recording this stock inward.
+            </p>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>Recorded By</label>
+              <input 
+                type="text" 
+                value={importRecordedBy} 
+                onChange={(e) => setImportRecordedBy(e.target.value)}
+                placeholder="e.g. Rahul Sharma"
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                disabled={isImporting}
+                autoFocus
+              />
+              <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>Leave blank to default to 'Import User'.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setPendingImportRows(null)} 
+                disabled={isImporting}
+                style={{ padding: '8px 16px', background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitImport}
+                disabled={isImporting}
+                style={{ padding: '8px 16px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+              >
+                {isImporting ? 'Importing...' : 'Save Items'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Demo toolbar ───────────────────────────────────────── */}
     </div>

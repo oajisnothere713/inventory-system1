@@ -202,6 +202,8 @@ export default function DetailPanel({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [pendingBulkRows, setPendingBulkRows] = useState<Record<string, string>[] | null>(null);
+  const [bulkRecordedBy, setBulkRecordedBy] = useState("");
   const [newItemMode, setNewItemMode] = useState<"single" | "bulk">("single");
   const bulkInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -214,6 +216,7 @@ export default function DetailPanel({
       setNewItem(initialNewItem);
       setSaveError(null);
       setBulkMessage(null);
+      setPendingBulkRows(null);
       setNewItemMode("single");
     });
 
@@ -449,7 +452,6 @@ export default function DetailPanel({
     if (!file) return;
 
     setBulkMessage(null);
-    setBulkImporting(true);
 
     try {
       const rows = csvTextToObjects(await file.text());
@@ -459,10 +461,26 @@ export default function DetailPanel({
         return;
       }
 
+      setPendingBulkRows(rows);
+      setBulkRecordedBy("");
+    } catch (err) {
+      setBulkMessage(err instanceof Error ? err.message : "Bulk import failed.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const confirmBulkImport = async () => {
+    if (!pendingBulkRows) return;
+    
+    setBulkImporting(true);
+    setBulkMessage(null);
+
+    try {
       const response = await fetch("/api/registry/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ rows: pendingBulkRows, recordedBy: bulkRecordedBy }),
       });
       const data = await response.json().catch(() => ({}));
 
@@ -471,13 +489,13 @@ export default function DetailPanel({
       }
 
       const skipped = Array.isArray(data.skipped) ? data.skipped.length : 0;
-      setBulkMessage(`Imported ${data.imported ?? rows.length} items${skipped ? `, skipped ${skipped}` : ""}.`);
+      setBulkMessage(`Imported ${data.imported ?? pendingBulkRows.length} items${skipped ? `, skipped ${skipped}` : ""}.`);
+      setPendingBulkRows(null);
       onItemCreated?.();
     } catch (err) {
       setBulkMessage(err instanceof Error ? err.message : "Bulk import failed.");
     } finally {
       setBulkImporting(false);
-      event.target.value = "";
     }
   };
 
@@ -516,19 +534,46 @@ export default function DetailPanel({
 
       {newItemMode === "bulk" ? (
         <div className="bulk-import-panel">
-          <div>
-            <div className="bulk-title">Add multiple items</div>
-            <div className="bulk-subtitle">Download the standard CSV, fill item rows, then import it here.</div>
-          </div>
-          <div className="bulk-actions">
-            <button className="bulk-btn" type="button" onClick={downloadBulkTemplate}>
-              Download template
-            </button>
-            <button className="bulk-btn primary" type="button" disabled={bulkImporting} onClick={() => bulkInputRef.current?.click()}>
-              {bulkImporting ? "Importing..." : "Import file"}
-            </button>
-          </div>
-          {bulkMessage ? <div className="bulk-message">{bulkMessage}</div> : null}
+          {pendingBulkRows ? (
+            <div>
+              <div className="bulk-title">Confirm Import</div>
+              <div className="bulk-subtitle">Ready to import {pendingBulkRows.length} items. Please specify who is recording this stock inward.</div>
+              <div style={{ margin: '16px 0' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px' }}>Recorded By</label>
+                <input 
+                  type="text" 
+                  value={bulkRecordedBy} 
+                  onChange={(e) => setBulkRecordedBy(e.target.value)}
+                  placeholder="e.g. Rahul Sharma"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                  disabled={bulkImporting}
+                  autoFocus
+                />
+                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>Leave blank to default to 'Import User'.</p>
+              </div>
+              <div className="bulk-actions">
+                <button className="bulk-btn" type="button" disabled={bulkImporting} onClick={() => setPendingBulkRows(null)}>Cancel</button>
+                <button className="bulk-btn primary" type="button" disabled={bulkImporting} onClick={confirmBulkImport}>
+                  {bulkImporting ? "Importing..." : "Confirm & Save"}
+                </button>
+              </div>
+              {bulkMessage ? <div className="bulk-message">{bulkMessage}</div> : null}
+            </div>
+          ) : (
+            <div>
+              <div className="bulk-title">Add multiple items</div>
+              <div className="bulk-subtitle">Download the standard CSV, fill item rows, then import it here.</div>
+              <div className="bulk-actions">
+                <button className="bulk-btn" type="button" onClick={downloadBulkTemplate}>
+                  Download template
+                </button>
+                <button className="bulk-btn primary" type="button" disabled={bulkImporting} onClick={() => bulkInputRef.current?.click()}>
+                  Import file
+                </button>
+              </div>
+              {bulkMessage ? <div className="bulk-message">{bulkMessage}</div> : null}
+            </div>
+          )}
         </div>
       ) : (
         <>
