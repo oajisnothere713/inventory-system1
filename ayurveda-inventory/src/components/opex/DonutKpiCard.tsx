@@ -22,9 +22,9 @@ export default function DonutKpiCard({ total, medicines, consumables }: Props) {
         <div className="donut-row">
           <svg width="80" height="80" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
             <circle cx="40" cy="40" r="29" fill="none" stroke="#e8eee9" strokeWidth={11} />
-            <circle cx="40" cy="40" r="29" fill="none" stroke="#1A6B3C" strokeWidth={11}
+            <circle cx="40" cy="40" r="29" fill="none" stroke="#f69a45" strokeWidth={11}
               strokeDasharray={`${medArc} ${circumference - medArc}`} strokeDashoffset={`${medOffset}`} />
-            <circle cx="40" cy="40" r="29" fill="none" stroke="#185FA5" strokeWidth={11}
+            <circle cx="40" cy="40" r="29" fill="none" stroke="#12ae34" strokeWidth={11}
               strokeDasharray={`${conArc} ${circumference - conArc}`} strokeDashoffset={`${conOffset}`} />
             <text x="40" y="36" textAnchor="middle" fontSize={14} fontWeight={500}
               fill="#0d1f12" fontFamily="'DM Mono',monospace">{total}</text>
