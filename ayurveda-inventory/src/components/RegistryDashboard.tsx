@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Item, FilterState, Batch, itemStatus } from "./registry/utils";
+import { Item, FilterState, Batch, itemStatus, batchStatus } from "./registry/utils";
 import FilterBar from "./registry/FilterBar";
 import ResultStrip from "./registry/ResultStrip";
 import RegistryTable from "./registry/RegistryTable";
@@ -169,11 +169,14 @@ export default function AyurVaidyaRegistry() {
       if (filters.category !== "all" && item.category !== filters.category) return false;
       if (filters.subcat && item.subcat !== filters.subcat) return false;
       if (filters.status) {
-        if (filters.status === "expiring" && item.status !== "expiring") return false;
-      if (filters.status === "expired" && !["expired", "amc_expired"].includes(item.status)) return false;
-      if (filters.status === "low_stock" && item.status !== "low_stock") return false;
-      if (filters.status === "amc_due" && !["amc_due", "amc_expired"].includes(item.status)) return false;
-      if (filters.status === "healthy" && !["healthy", "no_expiry", "no_amc"].includes(item.status)) return false;
+        const isCapex = item.category === "CAPEX";
+        const hasBatchStatus = (stArr: string[]) => (item.batches || []).some(b => stArr.includes(batchStatus(b, isCapex)));
+
+        if (filters.status === "expiring" && item.status !== "expiring" && !hasBatchStatus(["expiring"])) return false;
+        if (filters.status === "expired" && !["expired", "amc_expired"].includes(item.status) && !hasBatchStatus(["expired", "amc_expired"])) return false;
+        if (filters.status === "low_stock" && item.status !== "low_stock") return false;
+        if (filters.status === "amc_due" && !["amc_due", "amc_expired"].includes(item.status) && !hasBatchStatus(["amc_due", "amc_expired"])) return false;
+        if (filters.status === "healthy" && !["healthy", "no_expiry", "no_amc"].includes(item.status)) return false;
       }
       if (filters.search) {
         const hay = [
