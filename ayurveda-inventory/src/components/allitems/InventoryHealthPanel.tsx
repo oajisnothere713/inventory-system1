@@ -56,7 +56,7 @@ export default function InventoryHealthPanel({
         {/* CAPEX health bar */}
         <div className="health-block">
           <div className="health-label-row">
-            <div className="health-label-left"><div className="cat-dot" style={{ background: 'var(--blue)' }}></div><span>CAPEX — {capexCount} items</span></div>
+            <div className="health-label-left"><div className="cat-dot" style={{ background: '#29A073' }}></div><span>CAPEX — {capexCount} items</span></div>
             <span className="health-status" style={{ color: cCritical > 0 ? 'var(--amber)' : 'var(--green)' }}>{cCritical > 0 ? 'Attention needed' : 'Good overall'}</span>
           </div>
           <div className="health-bar">
@@ -74,7 +74,7 @@ export default function InventoryHealthPanel({
         {/* OPEX health bar */}
         <div className="health-block">
           <div className="health-label-row">
-            <div className="health-label-left"><div className="cat-dot" style={{ background: 'var(--green)' }}></div><span>OPEX — {opexCount} items</span></div>
+            <div className="health-label-left"><div className="cat-dot" style={{ background: '#f69a45' }}></div><span>OPEX — {opexCount} items</span></div>
             <span className="health-status" style={{ color: (oExpired > 0 || oExpiring > 0) ? 'var(--amber)' : 'var(--green)' }}>{(oExpired > 0 || oExpiring > 0) ? 'Attention needed' : 'Good overall'}</span>
           </div>
           <div className="health-bar">
