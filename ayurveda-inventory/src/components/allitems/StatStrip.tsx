@@ -16,7 +16,11 @@ type Props = {
   activeAlerts?: number;
   alertBreakdown?: AlertBreakdown;
   grnThisMonth?: number;
+  grnCapexThisMonth?: number;
+  grnOpexThisMonth?: number;
   issuesThisMonth?: number;
+  issuesCapexThisMonth?: number;
+  issuesOpexThisMonth?: number;
 };
 
 const emptyBreakdown = (): AlertBreakdown => ({
@@ -35,7 +39,11 @@ export default function StatStrip({
   activeAlerts = 0,
   alertBreakdown,
   grnThisMonth = 0,
+  grnCapexThisMonth = 0,
+  grnOpexThisMonth = 0,
   issuesThisMonth = 0,
+  issuesCapexThisMonth = 0,
+  issuesOpexThisMonth = 0,
 }: Props) {
   const breakdown = alertBreakdown ?? emptyBreakdown();
   const partsSum =
@@ -48,7 +56,7 @@ export default function StatStrip({
 
   const alertTags: { key: string; count: number; label: string; className: string }[] = [
     { key: "expiring", count: breakdown.expiring, label: "expiring", className: "tag tag-red" },
-    { key: "expired", count: breakdown.expired, label: "expired", className: "tag tag-red" },
+    { key: "expired", count: breakdown.expired, label: "expired", className: "tag tag-orange" },
     { key: "lowStock", count: breakdown.lowStock, label: "low stock", className: "tag tag-amber" },
     { key: "amcDue", count: breakdown.amcDue, label: "AMC due", className: "tag tag-blue" },
     { key: "amcExpired", count: breakdown.amcExpired, label: "AMC expired", className: "tag tag-slate" },
@@ -81,7 +89,8 @@ export default function StatStrip({
         <div className="stat-val" style={{ color: "var(--green)" }}>{grnThisMonth}</div>
         <div className="stat-lbl">GRN entries this month</div>
         <div className="tag-row">
-          <span className="tag tag-green">{issuesThisMonth} issues</span>
+          <span className="tag tag-blue">{issuesCapexThisMonth} CAPEX issues</span>
+          <span className="tag tag-green">{issuesOpexThisMonth} OPEX issues</span>
         </div>
       </div>
     </div>

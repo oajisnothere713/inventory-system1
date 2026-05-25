@@ -75,11 +75,30 @@ export default function CapexDashboard(){
   const amcDue = amcRows.filter(r => r.days != null && r.days >=0 && r.days < 60).length
   const amcExpired = amcRows.filter(r => r.days != null && r.days < 0).length
 
-  // groups: top name-prefix groups
-  const nameKey = (s: string) => s.split(/\s|\-|–/)[0].slice(0,24)
-  const groupsMap: Record<string, number> = {}
-  items.forEach(i => { const k = nameKey(i.name || 'Other'); groupsMap[k] = (groupsMap[k]||0)+1 })
-  const groups = Object.entries(groupsMap).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([label,count]) => ({ label, count, pct: total ? Math.round((count/total)*100) : 0 }))
+  // groups: top names separated by category, summing physical stock
+  const donutDevices = items.filter(i => i.subcat === 'devices').reduce((sum, i) => sum + i.stock, 0);
+  const donutElectrical = items.filter(i => i.subcat === 'electrical').reduce((sum, i) => sum + i.stock, 0);
+  const donutTotal = donutDevices + donutElectrical;
+
+  const deviceGroupsMap: Record<string, number> = {}
+  items.filter(i => i.subcat === 'devices').forEach(i => {
+    const k = i.name || 'Other';
+    deviceGroupsMap[k] = (deviceGroupsMap[k] || 0) + i.stock;
+  })
+  const deviceGroups = Object.entries(deviceGroupsMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([label, count]) => ({ label, count, pct: donutDevices ? Math.round((count / donutDevices) * 100) : 0 }))
+
+  const electricalGroupsMap: Record<string, number> = {}
+  items.filter(i => i.subcat === 'electrical').forEach(i => {
+    const k = i.name || 'Other';
+    electricalGroupsMap[k] = (electricalGroupsMap[k] || 0) + i.stock;
+  })
+  const electricalGroups = Object.entries(electricalGroupsMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([label, count]) => ({ label, count, pct: donutElectrical ? Math.round((count / donutElectrical) * 100) : 0 }))
 
   // last 6 months created counts
   const months: string[] = []
@@ -112,7 +131,7 @@ export default function CapexDashboard(){
       </div>
 
       <div className="grid g-2-1" style={{ marginBottom: 12 }}>
-        <DonutCard total={total} devices={devices} electrical={electrical} groups={groups} />
+        <DonutCard total={donutTotal} devices={donutDevices} electrical={donutElectrical} deviceGroups={deviceGroups} electricalGroups={electricalGroups} />
         <AMCRenewalsCard rows={amcRows.slice(0,6)} total={amcRows.length} expired={amcExpired} />
       </div>
 

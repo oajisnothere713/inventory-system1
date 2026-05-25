@@ -173,7 +173,7 @@ export default function AyurVaidyaRegistry() {
         const hasBatchStatus = (stArr: string[]) => (item.batches || []).some(b => stArr.includes(batchStatus(b, isCapex)));
 
         if (filters.status === "expiring" && item.status !== "expiring" && !hasBatchStatus(["expiring"])) return false;
-        if (filters.status === "expired" && !["expired", "amc_expired"].includes(item.status) && !hasBatchStatus(["expired", "amc_expired"])) return false;
+        if (filters.status === "expired" && item.status !== "expired" && !hasBatchStatus(["expired"])) return false;
         if (filters.status === "low_stock" && item.status !== "low_stock") return false;
         if (filters.status === "amc_due" && !["amc_due", "amc_expired"].includes(item.status) && !hasBatchStatus(["amc_due", "amc_expired"])) return false;
         if (filters.status === "healthy" && !["healthy", "no_expiry", "no_amc"].includes(item.status)) return false;
@@ -204,14 +204,15 @@ export default function AyurVaidyaRegistry() {
     // Sort according to selected column. When sorting by `status`, group by urgency
     // (expired/amc_due/expiring/low_stock/healthy). For other sorts, apply the
     // selected comparator and keep name as a tie-breaker.
-    const urgency: Record<string, number> = {expired: 0,
-      amc_expired: 0,
-      amc_due: 1,
+    const urgency: Record<string, number> = {
+      healthy: 0,
+      no_expiry: 0,
+      no_amc: 0,
+      low_stock: 1,
       expiring: 2,
-      low_stock: 3,
-      healthy: 4,
-      no_expiry: 5,
-      no_amc: 5,
+      amc_due: 2,
+      expired: 3,
+      amc_expired: 3,
     };
     rows.sort((a, b) => {
       if (filters.sortCol === "status") {

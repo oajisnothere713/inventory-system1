@@ -17,11 +17,12 @@ export async function GET() {
     const now = new Date()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const [totalItems, capexCount, opexCount, grnThisMonth, recentGrns, registryRows] = await Promise.all([
+    const [totalItems, capexCount, opexCount, grnCapexThisMonth, grnOpexThisMonth, recentGrns, registryRows] = await Promise.all([
       prisma.item.count({ where: { isActive: true } }),
       prisma.item.count({ where: { category: 'CAPEX', isActive: true } }),
       prisma.item.count({ where: { category: 'OPEX', isActive: true } }),
-      prisma.grnEntry.count({ where: { grnDate: { gte: firstDayOfMonth } } }),
+      prisma.grnEntry.count({ where: { grnDate: { gte: firstDayOfMonth }, item: { category: 'CAPEX' } } }),
+      prisma.grnEntry.count({ where: { grnDate: { gte: firstDayOfMonth }, item: { category: 'OPEX' } } }),
       prisma.grnEntry.findMany({
         orderBy: { grnDate: 'desc' },
         take: 5,
@@ -41,8 +42,9 @@ export async function GET() {
     }))
 
     // compute issues this month and total value received this month
-    const [issuesThisMonth, grnSum] = await Promise.all([
-      prisma.stockIssue.count({ where: { issueDate: { gte: firstDayOfMonth } } }),
+    const [issuesCapexThisMonth, issuesOpexThisMonth, grnSum] = await Promise.all([
+      prisma.stockIssue.count({ where: { issueDate: { gte: firstDayOfMonth }, item: { category: 'CAPEX' } } }),
+      prisma.stockIssue.count({ where: { issueDate: { gte: firstDayOfMonth }, item: { category: 'OPEX' } } }),
       prisma.grnEntry.aggregate({ where: { grnDate: { gte: firstDayOfMonth } }, _sum: { totalValue: true } }),
     ])
 
@@ -57,10 +59,14 @@ export async function GET() {
       opexCount,
       activeAlerts: alertBreakdown.total,
       alertBreakdown,
-      grnThisMonth,
-      issuesThisMonth,
+      grnThisMonth: grnCapexThisMonth + grnOpexThisMonth,
+      grnCapexThisMonth,
+      grnOpexThisMonth,
+      issuesThisMonth: issuesCapexThisMonth + issuesOpexThisMonth,
+      issuesCapexThisMonth,
+      issuesOpexThisMonth,
       valueReceived,
-      expiredCount: alertBreakdown.expired + alertBreakdown.amcExpired,
+      expiredCount: alertBreakdown.expired,
       recentGrns: serialized,
       expiring,
       lowStock,

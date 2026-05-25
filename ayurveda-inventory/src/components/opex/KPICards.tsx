@@ -25,7 +25,7 @@ export default function KPICards({ expiring30Days, lowStock, grnThisMonth, issue
       <div className="kpi-card n" style={{ animationDelay: '.14s' }}>
         <div className="kpi-num" style={{ color: 'var(--text)' }}>{grnThisMonth}</div>
         <div className="kpi-lbl">GRN this month</div>
-        <div className="kpi-sub">{issuesThisMonth} issues this month</div>
+        <div style={{ marginTop: 8 }}><span className="tag tag-green">{issuesThisMonth} OPEX issues</span></div>
       </div>
     </>
   );

@@ -22,7 +22,11 @@ type DashboardPayload = {
   activeAlerts: number
   alertBreakdown?: AlertBreakdown
   grnThisMonth: number
+  grnCapexThisMonth?: number
+  grnOpexThisMonth?: number
   issuesThisMonth?: number
+  issuesCapexThisMonth?: number
+  issuesOpexThisMonth?: number
   recentGrns: {
     grnId: number
     grnNumber: string
@@ -32,7 +36,7 @@ type DashboardPayload = {
     item?: { itemName?: string }
   }[]
   expiring?: { batchId: number; batchNumber?: string; expiryDate?: string; quantityAvailable?: string; item?: { itemId?: number; itemName?: string } }[]
-  lowStock?: { itemId: number; itemName?: string; totalAvailable: number }[]
+  lowStock?: { itemId: number; itemName?: string; totalAvailable: number; minStockLevel: number }[]
   amcDue?: { amcId: number; amcNumber?: string; contractEnd?: string; item?: { itemId?: number; itemName?: string } }[]
   expiredCount?: number
   expired?: { batchId: string | number; batchNumber?: string; expiryDate?: string; quantityAvailable?: string; item?: { itemId?: string | number; itemName?: string } }[]
@@ -65,7 +69,11 @@ export default function AllItemsDashboard() {
           activeAlerts={data.activeAlerts ?? 0}
           alertBreakdown={data.alertBreakdown}
           grnThisMonth={data.grnThisMonth ?? 0}
+          grnCapexThisMonth={data.grnCapexThisMonth ?? 0}
+          grnOpexThisMonth={data.grnOpexThisMonth ?? 0}
           issuesThisMonth={data.issuesThisMonth ?? 0}
+          issuesCapexThisMonth={data.issuesCapexThisMonth ?? 0}
+          issuesOpexThisMonth={data.issuesOpexThisMonth ?? 0}
         />
         <AttentionCard 
           expiring={data.expiring ?? []} 
@@ -73,7 +81,7 @@ export default function AllItemsDashboard() {
           lowStock={data.lowStock ?? []} 
           lowStockCount={data.alertBreakdown?.lowStock ?? 0}
           amcDue={data.amcDue ?? []} 
-          amcDueCount={data.alertBreakdown?.amcDue ?? 0}
+          amcDueCount={(data.alertBreakdown?.amcDue ?? 0) + (data.alertBreakdown?.amcExpired ?? 0)}
           expiredCount={data.expiredCount ?? 0} 
           expired={data.expired ?? []} 
         />

@@ -100,10 +100,14 @@ export async function POST(req: Request) {
           // Resolve or create supplier (single roundtrip logic)
           let supId: number | null = null
           if (supplierName && supplierName.trim()) {
-            const s = await tx.supplier.findFirst({ where: { supplierName } })
+            const s = await tx.supplier.findFirst({ 
+              where: { supplierName: { equals: supplierName.trim(), mode: 'insensitive' } } 
+            })
             if (s) supId = s.supplierId
             else {
-              const code = supplierName.replace(/[^A-Z0-9]/gi, '').slice(0, 8) || 'SUP'
+              const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase()
+              const baseCode = supplierName.replace(/[^A-Z0-9]/gi, '').slice(0, 3).toUpperCase() || 'SUP'
+              const code = `${baseCode}-${randomSuffix}`
               const created = await tx.supplier.create({ data: { supplierCode: code, supplierName } })
               supId = created.supplierId
             }
@@ -155,14 +159,15 @@ export async function POST(req: Request) {
 
             if (amcSupplierName && String(amcSupplierName).trim()) {
               const existingAmcSupplier = await tx.supplier.findFirst({
-                where: { supplierName: String(amcSupplierName).trim() },
+                where: { supplierName: { equals: String(amcSupplierName).trim(), mode: 'insensitive' } },
               });
 
               if (existingAmcSupplier) {
                 amcSupId = existingAmcSupplier.supplierId;
               } else {
-                const amcSupplierCode =
-                  String(amcSupplierName).replace(/[^A-Z0-9]/gi, "").slice(0, 8) || "AMCSUP";
+                const amcRandomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const baseAmcCode = String(amcSupplierName).replace(/[^A-Z0-9]/gi, "").slice(0, 3).toUpperCase() || "AMC";
+                const amcSupplierCode = `${baseAmcCode}-${amcRandomSuffix}`;
 
                 const createdAmcSupplier = await tx.supplier.create({
                   data: {
