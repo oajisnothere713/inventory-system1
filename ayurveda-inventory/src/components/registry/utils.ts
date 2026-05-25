@@ -88,8 +88,8 @@ export function totalStock(item: Item) {
   return item.batches?.reduce((sum, batch) => sum + Number(batch.stock || 0), 0) ?? item.stock;
 }
 
-/** Flag OPEX items at or within 20% above minimum (reorder buffer). */
-export const LOW_STOCK_BUFFER_RATIO = 1.2;
+/** Flag OPEX items at or below minimum. */
+export const LOW_STOCK_BUFFER_RATIO = 1.0;
 
 export function lowStockCeiling(min: number) {
   return min > 0 ? min * LOW_STOCK_BUFFER_RATIO : 0;
@@ -138,14 +138,15 @@ export function fefoSort(item: Item) {
 
 
 export function stockPct(item: Item): number {
-  return Math.min(100, Math.round((totalStock(item) / Math.max(1, item.min || 1)) * 100));
+  return Math.round((totalStock(item) / Math.max(1, item.min || 1)) * 100);
 }
 
 export function stockBarColor(item: Item): string {
   const pct = stockPct(item);
-  if (pct <= 25) return "var(--red)";
-  if (pct <= 60) return "var(--amber)";
-  return "var(--green)";
+  if (pct < 25) return "#b91c1c"; // red
+  if (pct < 40) return "#f97316"; // orange
+  if (pct < 100) return "#eab308"; // yellow
+  return "#1a6b3c"; // green
 }
 
 export type ExpiryColumnSummary = {

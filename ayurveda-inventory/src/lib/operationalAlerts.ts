@@ -54,6 +54,7 @@ export type DashboardLowStockItem = {
   itemId: string;
   itemName?: string;
   totalAvailable: number;
+  minStockLevel: number;
 };
 
 export type DashboardAmcDue = {
@@ -85,6 +86,7 @@ export function buildDashboardAttentionPreviews(items: Item[]) {
         itemId: item.id,
         itemName: item.name,
         totalAvailable: totalStock(item),
+        minStockLevel: item.min,
       });
     }
 
@@ -99,7 +101,7 @@ export function buildDashboardAttentionPreviews(items: Item[]) {
           item: { itemId: item.id, itemName: item.name },
         });
       }
-      if ((status === "expired" || status === "amc_expired") && expired.length < PREVIEW_LIMIT) {
+      if (status === "expired" && expired.length < PREVIEW_LIMIT) {
         expired.push({
           batchId: `${item.id}:${batch.batch}`,
           batchNumber: batch.batch,
@@ -108,7 +110,7 @@ export function buildDashboardAttentionPreviews(items: Item[]) {
           item: { itemId: item.id, itemName: item.name },
         });
       }
-      if (status === "amc_due" && amcDue.length < PREVIEW_LIMIT) {
+      if ((status === "amc_due" || status === "amc_expired") && amcDue.length < PREVIEW_LIMIT) {
         amcDue.push({
           amcId: `${item.id}:${batch.amc ?? batch.batch}`,
           amcNumber: batch.amc ?? undefined,

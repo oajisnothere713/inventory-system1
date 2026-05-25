@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InsightAlert, Severity, useRegistryInsights } from "./registryInsights";
 
-type Filter = "all" | Severity | "resolved";
+type Filter = "all" | Severity | "snoozed" | "resolved";
 
 const GROUPS: { key: Severity; label: string; sub: string }[] = [
   { key: "critical", label: "Critical", sub: "Expired, AMC expired, stock critical" },
@@ -18,13 +18,41 @@ export default function AlertsDashboard() {
   const [resolved, setResolved] = useState<Set<number>>(new Set());
   const [snoozed, setSnoozed] = useState<Set<number>>(new Set());
   const [showResolved, setShowResolved] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<Severity>>(new Set());
+
+  useEffect(() => {
+    try {
+      const storedResolved = localStorage.getItem('ayur_resolved_alerts');
+      if (storedResolved) setResolved(new Set(JSON.parse(storedResolved)));
+      const storedSnoozed = localStorage.getItem('ayur_snoozed_alerts');
+      if (storedSnoozed) setSnoozed(new Set(JSON.parse(storedSnoozed)));
+    } catch(e){}
+  }, []);
+
+  const resolveAlert = (id: number) => {
+    setResolved(prev => {
+      const next = new Set(prev).add(id);
+      localStorage.setItem('ayur_resolved_alerts', JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const snoozeAlert = (id: number) => {
+    setSnoozed(prev => {
+      const next = new Set(prev).add(id);
+      localStorage.setItem('ayur_snoozed_alerts', JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   const visibleAlerts = useMemo(
     () =>
       alerts.filter((alert) => {
         const isResolved = resolved.has(alert.id);
+        const isSnoozed = snoozed.has(alert.id);
         if (filter === "resolved") return isResolved;
-        if (isResolved || snoozed.has(alert.id)) return false;
+        if (filter === "snoozed") return isSnoozed;
+        if (isResolved || isSnoozed) return false;
         if (filter !== "all" && alert.severity !== filter) return false;
         return true;
       }),
@@ -38,8 +66,22 @@ export default function AlertsDashboard() {
     }, { critical: 0, high: 0, medium: 0, low: 0 });
   }, [alerts, resolved, snoozed]);
 
-  const markAllRead = () => setResolved(new Set(alerts.map((alert) => alert.id)));
+  const markAllRead = () => {
+    const next = new Set(alerts.map((alert) => alert.id));
+    setResolved(next);
+    localStorage.setItem('ayur_resolved_alerts', JSON.stringify([...next]));
+  };
+  
+  const toggleGroup = (groupKey: Severity) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  };
   const resolvedAlerts = alerts.filter((alert) => resolved.has(alert.id));
+  const snoozedAlerts = alerts.filter((alert) => snoozed.has(alert.id));
 
   return (
     <div className="insights-page">
@@ -51,6 +93,7 @@ export default function AlertsDashboard() {
           ["high", "High", "amber"],
           ["medium", "Medium", "blue"],
           ["low", "Low", ""],
+          ["snoozed", "Snoozed", "amber"],
           ["resolved", "Resolved", "green"],
         ].map(([key, label, tone]) => (
           <button key={key} className={`insights-chip ${tone} ${filter === key ? "active" : ""}`} onClick={() => setFilter(key as Filter)}>
@@ -69,7 +112,12 @@ export default function AlertsDashboard() {
 
         <div className="alert-summary">
           {GROUPS.map((group) => (
-            <div className={`alert-tile ${group.key}`} key={group.key}>
+            <div 
+              className={`alert-tile ${group.key} ${filter === group.key ? "active" : ""}`} 
+              key={group.key}
+              onClick={() => setFilter(filter === group.key ? "all" : group.key)}
+              style={{ cursor: "pointer" }}
+            >
               <div className="alert-tile-num">{counts[group.key]}</div>
               <div className="alert-tile-label">{group.label}</div>
               <div className="alert-tile-sub">{group.sub}</div>
@@ -81,29 +129,79 @@ export default function AlertsDashboard() {
           <div className="insights-card alert-empty">No active registry-driven alerts. Item Registry is currently healthy.</div>
         ) : null}
 
-        {GROUPS.map((group) => {
+        {filter !== "snoozed" && filter !== "resolved" && GROUPS.map((group) => {
           const rows = visibleAlerts.filter((alert) => alert.severity === group.key);
           if (!rows.length && filter !== "all" && filter !== group.key) return null;
           return (
             <section className="alert-section" key={group.key}>
-              <div className="alert-section-head">
+              <div 
+                className="alert-section-head" 
+                onClick={() => toggleGroup(group.key)} 
+                style={{ cursor: "pointer", userSelect: "none" }}
+              >
                 <span className={`alert-dot ${group.key}`} />
                 <div className="alert-section-title">{group.label}</div>
-                <div className="alert-section-count">{rows.length} alert{rows.length === 1 ? "" : "s"}</div>
+                <div className="alert-section-count">
+                  {rows.length} alert{rows.length === 1 ? "" : "s"}
+                  <span style={{ opacity: 0.6, marginLeft: 8, fontSize: "0.85em", fontWeight: "normal" }}>
+                    {collapsedGroups.has(group.key) ? "(Click to expand)" : "(Click to collapse)"}
+                  </span>
+                </div>
               </div>
-              <div className="insights-card">
-                {rows.length ? rows.map((alert) => (
-                  <AlertRow
-                    alert={alert}
-                    key={alert.id}
-                    onSnooze={() => setSnoozed((current) => new Set(current).add(alert.id))}
-                    onResolve={() => setResolved((current) => new Set(current).add(alert.id))}
-                  />
-                )) : <div className="alert-empty">No {group.label.toLowerCase()} alerts.</div>}
-              </div>
+              {!collapsedGroups.has(group.key) && (
+                <div className="insights-card">
+                  {rows.length ? rows.map((alert) => (
+                    <AlertRow
+                      alert={alert}
+                      key={alert.id}
+                      onSnooze={() => snoozeAlert(alert.id)}
+                      onResolve={() => resolveAlert(alert.id)}
+                    />
+                  )) : <div className="alert-empty">No {group.label.toLowerCase()} alerts.</div>}
+                </div>
+              )}
             </section>
           );
         })}
+
+        {filter === "snoozed" ? (
+          <section className="alert-section" style={{ marginTop: 12, marginBottom: 12 }}>
+            <div className="alert-section-head">
+              <span className="alert-dot amber" />
+              <div className="alert-section-title">Snoozed</div>
+              <div className="alert-section-count">{snoozedAlerts.length} alerts</div>
+            </div>
+            <div className="insights-card">
+              {snoozedAlerts.length ? snoozedAlerts.map((alert) => (
+                <div className="alert-row snoozed" key={alert.id}>
+                  <div className={`alert-icon ${alert.severity}`}>{alert.icon}</div>
+                  <div className="alert-body">
+                    <div className="alert-title">{alert.title}</div>
+                    <div className="alert-detail">{alert.detail}</div>
+                    <div className="alert-meta">
+                      <span className="insights-pill amber">Snoozed</span>
+                    </div>
+                  </div>
+                  <div className="alert-actions">
+                    <button 
+                      className="insights-btn" 
+                      onClick={() => {
+                        setSnoozed(prev => {
+                          const next = new Set(prev);
+                          next.delete(alert.id);
+                          localStorage.setItem('ayur_snoozed_alerts', JSON.stringify([...next]));
+                          return next;
+                        });
+                      }}
+                    >
+                      Unsnooze
+                    </button>
+                  </div>
+                </div>
+              )) : <div className="alert-empty">No snoozed alerts.</div>}
+            </div>
+          </section>
+        ) : null}
 
         <button className="insights-btn" onClick={() => setShowResolved((current) => !current)}>
           {showResolved ? "Hide" : "Show"} {resolvedAlerts.length} resolved alerts
@@ -126,7 +224,6 @@ export default function AlertsDashboard() {
                     <div className="alert-meta">
                       <span className="insights-pill green">Resolved</span>
                       <span style={{ fontSize: 10.5, color: "var(--ins-dim)" }}>by Ramesh Kumar</span>
-                      <span className="alert-time">this session</span>
                     </div>
                   </div>
                 </div>
@@ -150,7 +247,6 @@ function AlertRow({ alert, onSnooze, onResolve }: { alert: InsightAlert; onSnooz
           <span className={`insights-pill ${toneFor(alert.severity)}`}>{alert.type}</span>
           <span style={{ fontSize: 10.5, color: "var(--ins-dim)" }}>ID: <strong style={{ color: "var(--ins-text)" }}>{alert.item}</strong></span>
           {alert.action ? <span className="alert-action-text">{alert.action}</span> : null}
-          <span className="alert-time">{alert.time}</span>
         </div>
       </div>
       <div className="alert-actions">

@@ -128,7 +128,7 @@ export default function OpexDashboard(){
     .slice(0, 6)
     .map((r) => [
       r.name,
-      `${fmt(r.avail)} / limit ${fmt(r.ceiling)} (min ${fmt(r.min)})${r.unit ? ` ${r.unit}` : ''}`.trim(),
+      `${fmt(r.avail)} available (Min: ${fmt(r.min)}${r.unit ? ` ${r.unit}` : ''})`,
       `${Math.min(100, r.pct)}%`,
       r.pill,
     ] as string[])

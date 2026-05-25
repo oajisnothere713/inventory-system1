@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Cell, InsightReport, useRegistryInsights } from "./registryInsights";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 type ReportKey = "stock" | "expiry" | "consumption" | "grn" | "wastage" | "amc" | "reorder";
 type ReportFilters = Record<string, string>;
@@ -11,10 +13,83 @@ export default function ReportsDashboard() {
   const { reports, loading, error } = useRegistryInsights();
   const [current, setCurrent] = useState<ReportKey>("stock");
   const [filtersByReport, setFiltersByReport] = useState<FiltersByReport>({});
+  const [disposedBatches, setDisposedBatches] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ayur_disposed_batches');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        let changed = false;
+        const now = Date.now();
+        for (const key in parsed) {
+          const cached = parsed[key];
+          let time = 0;
+          if (cached?.timestamp) time = cached.timestamp;
+          else {
+            const d = typeof cached === 'string' ? cached : cached?.date;
+            if (d) time = new Date(d).getTime();
+          }
+          if (time && (now - time) / (1000 * 60 * 60 * 24) > 90) {
+            delete parsed[key];
+            changed = true;
+          }
+        }
+        setDisposedBatches(parsed);
+        if (changed) {
+          localStorage.setItem('ayur_disposed_batches', JSON.stringify(parsed));
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  const markDisposed = async (row: Cell[]) => {
+    const id = cellText(row[0]);
+    const batch = cellText(row[4]);
+    
+    if (!confirm(`Are you sure you want to permanently record disposal and delete batch ${batch} from the Item Registry?`)) {
+      return;
+    }
+
+    setDisposedBatches(prev => {
+      const next = { ...prev, [`${id}_${batch}`]: {
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        timestamp: Date.now(),
+        row: row
+      } };
+      localStorage.setItem('ayur_disposed_batches', JSON.stringify(next));
+      return next;
+    });
+
+    try {
+      await fetch(`/api/batch?itemId=${encodeURIComponent(id)}&batchNumber=${encodeURIComponent(batch)}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error("Failed to delete batch from backend", e);
+    }
+  };
+
   const report = reports[current];
   const reportKeys = useMemo(() => Object.keys(reports) as ReportKey[], [reports]);
-  const activeFilters = useMemo(() => buildActiveFilters(report, filtersByReport[current]), [filtersByReport, current, report]);
-  const filteredRows = useMemo(() => (report ? applyReportFilters(report, activeFilters) : []), [report, activeFilters]);
+  const enhancedReport = useMemo(() => {
+    if (!report) return null;
+    if (!report.title.includes("Wastage")) return report;
+
+    const newReport = { ...report, rows: [...report.rows] };
+    const existingKeys = new Set(newReport.rows.map(r => `${cellText(r[0])}_${cellText(r[4])}`));
+    
+    for (const key in disposedBatches) {
+      if (!existingKeys.has(key)) {
+        const cached = disposedBatches[key];
+        if (cached && cached.row) {
+          newReport.rows.push(cached.row);
+        }
+      }
+    }
+    return newReport;
+  }, [report, disposedBatches]);
+
+  const activeFilters = useMemo(() => buildActiveFilters(enhancedReport, filtersByReport[current]), [filtersByReport, current, enhancedReport]);
+  const filteredRows = useMemo(() => (enhancedReport ? applyReportFilters(enhancedReport, activeFilters) : []), [enhancedReport, activeFilters]);
 
   const downloadCsv = () => {
     if (!report) return;
@@ -24,9 +99,35 @@ export default function ReportsDashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `AyurVaidya_${current}_registry_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${report.title.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadPdf = () => {
+    if (!report || !filteredRows.length) return;
+    const doc = new jsPDF("landscape");
+    
+    doc.setFontSize(18);
+    doc.setTextColor(40);
+    doc.text(report.title, 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(report.sub, 14, 30);
+    
+    const tableData = filteredRows.map(row => row.map(cell => cellText(cell)));
+    
+    autoTable(doc, {
+      head: [report.headers],
+      body: tableData,
+      startY: 36,
+      theme: 'grid',
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+    });
+    
+    doc.save(`${report.title.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   const updateFilter = (id: string, value: string) => {
@@ -74,7 +175,10 @@ export default function ReportsDashboard() {
               rows={filteredRows.slice(0, 12)}
               filteredCount={filteredRows.length}
               onFilterChange={updateFilter}
-              onDownload={downloadCsv}
+              onDownloadCsv={downloadCsv}
+              onDownloadPdf={downloadPdf}
+              disposedBatches={disposedBatches}
+              onMarkDisposed={markDisposed}
             />
           ) : null}
         </main>
@@ -89,14 +193,20 @@ function ReportContent({
   rows,
   filteredCount,
   onFilterChange,
-  onDownload,
+  onDownloadCsv,
+  onDownloadPdf,
+  disposedBatches,
+  onMarkDisposed,
 }: {
   report: InsightReport;
   filters: ReportFilters;
   rows: Cell[][];
   filteredCount: number;
   onFilterChange: (id: string, value: string) => void;
-  onDownload: () => void;
+  onDownloadCsv: () => void;
+  onDownloadPdf: () => void;
+  disposedBatches: Record<string, any>;
+  onMarkDisposed: (row: Cell[]) => void;
 }) {
   return (
     <>
@@ -128,13 +238,32 @@ function ReportContent({
             <table className="report-table">
               <thead><tr>{report.headers.map((head) => <th key={head}>{head}</th>)}</tr></thead>
               <tbody>
-                {rows.length ? rows.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {row.map((cell, cellIndex) => (
-                      <td key={cellIndex}>{typeof cell === "string" ? cell : <span className={`insights-pill ${cell.c}`}>{cell.t}</span>}</td>
-                    ))}
-                  </tr>
-                )) : (
+                {rows.length ? rows.map((row, rowIndex) => {
+                  const isWastage = report.title.includes("Wastage");
+                  return (
+                    <tr key={rowIndex}>
+                      {row.map((cell, cellIndex) => {
+                        if (isWastage && report.headers[cellIndex] === "Action") {
+                          const batchKey = `${cellText(row[0])}_${cellText(row[4])}`;
+                          const cached = disposedBatches[batchKey];
+                          const disposedDate = typeof cached === 'string' ? cached : cached?.date;
+                          return (
+                            <td key={cellIndex}>
+                              {disposedDate ? (
+                                <span style={{ color: "var(--ins-dim)", fontSize: 11 }}>Disposed on {disposedDate}</span>
+                              ) : (
+                                <button className="insights-btn" style={{ padding: "4px 10px", fontSize: 11, backgroundColor: "var(--ins-red-light)", color: "var(--ins-red)", borderColor: "var(--ins-red-light)" }} onClick={() => onMarkDisposed(row)}>Dispose & Record</button>
+                              )}
+                            </td>
+                          );
+                        }
+                        return (
+                          <td key={cellIndex}>{typeof cell === "string" ? cell : <span className={`insights-pill ${cell.c}`}>{cell.t}</span>}</td>
+                        );
+                      })}
+                    </tr>
+                  );
+                }) : (
                   <tr><td colSpan={report.headers.length}>No rows found for this registry report.</td></tr>
                 )}
               </tbody>
@@ -146,8 +275,8 @@ function ReportContent({
       </div>
       <div className="report-download">
         <div className="report-download-info">Ready to export from Item Registry: <strong style={{ color: "var(--ins-text)" }}>{filteredCount} rows</strong> - {report.title}</div>
-        <button className="insights-btn" onClick={() => window.print()}>Preview PDF</button>
-        <button className="insights-btn primary" onClick={onDownload}>Download CSV</button>
+        <button className="insights-btn" onClick={onDownloadPdf}>Preview PDF</button>
+        <button className="insights-btn primary" onClick={onDownloadCsv}>Download CSV</button>
       </div>
     </>
   );

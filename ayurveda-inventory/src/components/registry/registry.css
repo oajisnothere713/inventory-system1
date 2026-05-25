@@ -406,12 +406,12 @@ tbody tr:hover .action-cell{opacity:1}
 }
 
 .sbar {
-  height: 3px;
+  height: 4px;
   background: var(--border);
   border-radius: 2px;
   overflow: hidden;
-  width: 80px;
-  margin-top: 3px;
+  width: 120px;
+  margin-top: 4px;
 }
 
 .sbf {
@@ -1054,9 +1054,6 @@ tbody tr:hover .action-cell{opacity:1}
   color:var(--text-mid);
 }
 
-.registry-table-card .sbf{
-  background:var(--green) !important;
-}
 
 .registry-page .fbar-r1 .btn{
   height:36px;

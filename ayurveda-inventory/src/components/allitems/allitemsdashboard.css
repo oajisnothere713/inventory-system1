@@ -12,6 +12,7 @@
 .tag-green{background:var(--green-light);color:var(--green);border:1px solid rgba(26,107,60,0.18)}
 .tag-red{background:var(--red-light);color:var(--red);border:1px solid rgba(185,28,28,0.18)}
 .tag-amber{background:var(--amber-light);color:var(--amber);border:1px solid rgba(146,64,14,0.18)}
+.tag-orange{background:#fff7ed;color:#f97316;border:1px solid rgba(249,115,22,0.18)}
 .tag-slate{background:var(--slate-light);color:var(--slate);border:1px solid rgba(61,90,108,0.18)}
 
 .attention-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;margin-bottom:14px;animation:fadeUp 0.38s ease 0.06s both}
@@ -35,7 +36,8 @@
 .pill-green{background:var(--green-light);color:var(--green);border:1px solid rgba(26,107,60,0.15)}
 .pill-blue{background:var(--blue-light);color:var(--blue);border:1px solid rgba(24,95,165,0.15)}
 .pill-slate{background:var(--slate-light);color:var(--slate);border:1px solid rgba(61,90,108,0.15)}
-.attn-more{font-size:11.5px;color:var(--text-mute);padding-left:12px;font-style:italic;margin-top:2px}
+.attn-more{display:inline-block;font-size:11.5px;color:var(--text-mute);padding-left:12px;font-style:italic;margin-top:2px;text-decoration:none;cursor:pointer;transition:all 0.15s}
+.attn-more:hover{color:var(--blue);text-decoration:underline;opacity:0.9}
 .danger-notice{margin-top:10px;padding:7px 10px;border-radius:var(--r-sm);background:var(--red-light);border:1px solid rgba(185,28,28,0.18);font-size:11.5px;color:var(--red);line-height:1.4}
 
 .bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;animation:fadeUp 0.38s ease 0.12s both}

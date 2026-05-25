@@ -139,7 +139,7 @@ export default function RegistryTable({
                     ) : (
                       <div>
                         <div className="sval">{total.toLocaleString()} {item.unit}</div>
-                        <div className="sbar"><div className="sbf" style={{ width: `${pct}%`, background: stockBarColor(item) }} /></div>
+                        <div className="sbar"><div className="sbf" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: stockBarColor(item) }} /></div>
                         <div className="spct">{pct}% of min {item.min.toLocaleString()}</div>
                       </div>
                     )}
@@ -233,11 +233,27 @@ export default function RegistryTable({
                                           event.stopPropagation();
                                           if (confirm(`Are you sure you want to permanently dispose of and delete batch ${batch.batch}?`)) {
                                             try {
-                                              // Extract numeric ID from item.id if it's string, assuming item.id might be numeric or format like MED-002
-                                              // Actually, item.id in the UI is the string code (e.g. "MED-002"), but the API might need the numeric item_id. 
-                                              // Wait, does the API need the numeric itemId? Let me check utils.ts or route.ts.
-                                              // If item.id is a string like 'MED-002', parsing it will result in NaN!
-                                              // I should use the string item.id to find the item, or fetch it via item_code.
+                                              const rowToCache = [
+                                                item.id,
+                                                item.name,
+                                                item.category,
+                                                item.dept || "-",
+                                                batch.batch,
+                                                Number(batch.stock || 0).toLocaleString(),
+                                                item.unit,
+                                                batch.expiry ? new Date(batch.expiry).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "-",
+                                                new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(batch.stock || 0) * Number(item.price || 0)),
+                                                "Record disposal"
+                                              ];
+                                              const stored = localStorage.getItem('ayur_disposed_batches');
+                                              const disposedBatches = stored ? JSON.parse(stored) : {};
+                                              disposedBatches[`${item.id}_${batch.batch}`] = {
+                                                date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                                                timestamp: Date.now(),
+                                                row: rowToCache
+                                              };
+                                              localStorage.setItem('ayur_disposed_batches', JSON.stringify(disposedBatches));
+
                                               const res = await fetch(`/api/batch?itemId=${encodeURIComponent(item.id)}&batchNumber=${encodeURIComponent(batch.batch)}`, { method: 'DELETE' });
                                               if (res.ok) {
                                                 window.location.reload();
@@ -263,6 +279,28 @@ export default function RegistryTable({
                                         event.stopPropagation();
                                         if (confirm(`Are you sure you want to permanently dispose of this asset and all its associated serial numbers (GRN: ${batch.batch})?`)) {
                                           try {
+                                            const expDateStr = batch.amcExpiry ? new Date(batch.amcExpiry).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+                                            const rowToCache = [
+                                              item.id,
+                                              item.name,
+                                              item.category,
+                                              item.dept || "-",
+                                              batch.batch,
+                                              Number(batch.stock || 0).toLocaleString(),
+                                              item.unit,
+                                              expDateStr,
+                                              new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(batch.stock || 0) * Number(item.price || 0)),
+                                              "Record disposal"
+                                            ];
+                                            const stored = localStorage.getItem('ayur_disposed_batches');
+                                            const disposedBatches = stored ? JSON.parse(stored) : {};
+                                            disposedBatches[`${item.id}_${batch.batch}`] = {
+                                              date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                                              timestamp: Date.now(),
+                                              row: rowToCache
+                                            };
+                                            localStorage.setItem('ayur_disposed_batches', JSON.stringify(disposedBatches));
+
                                             const res = await fetch(`/api/batch?itemId=${encodeURIComponent(item.id)}&batchNumber=${encodeURIComponent(batch.batch)}`, { method: 'DELETE' });
                                             if (res.ok) {
                                               window.location.reload();

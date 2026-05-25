@@ -127,7 +127,7 @@ export default function Home() {
         <nav>
           <div className="nav-block">
             <div className="nav-label">Main</div>
-            <div className={`nav-item ${activeTab === "ALL" || activeTab === "CAPEX" || activeTab === "OPEX" ? "active" : ""}`} onClick={() => setActiveTab("CAPEX")}><div className="nav-icon">D</div> Dashboard</div>
+            <div className={`nav-item ${activeTab === "ALL" || activeTab === "CAPEX" || activeTab === "OPEX" ? "active" : ""}`} onClick={() => setActiveTab("ALL")}><div className="nav-icon">D</div> Dashboard</div>
             <div className={`nav-item ${activeTab === "REG" ? "active" : ""}`} onClick={() => setActiveTab("REG")}><div className="nav-icon">R</div> Item Registry</div>
             <div className={`nav-item ${activeTab === "GRN" && grnView === "grn" ? "active" : ""}`} onClick={() => { setActiveTab("GRN"); setGrnView("grn"); }}><div className="nav-icon">In</div> Stock Inward</div>
             <div className={`nav-item ${activeTab === "GRN" && grnView === "qr" ? "active" : ""}`} onClick={() => { setActiveTab("GRN"); setGrnView("qr"); }}><div className="nav-icon">QR</div> QR Generator</div>

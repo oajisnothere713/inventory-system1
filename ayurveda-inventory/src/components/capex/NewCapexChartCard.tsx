@@ -34,8 +34,7 @@ export default function NewCapexChartCard({ createdCounts, totalThisYear, peakMo
             <div className="sum-block"><div className="sum-lbl">Devices added</div><div className="sum-num-sm" style={{ color: 'var(--blue)' }}>{devicesAdded} items</div></div>
             <div style={{ height: 1, background: 'var(--border)' }}></div>
             <div className="sum-block"><div className="sum-lbl">Electrical added</div><div className="sum-num-sm" style={{ color: 'var(--green)' }}>{electricalAdded} items</div></div>
-            <div style={{ height: 1, background: 'var(--border)' }}></div>
-            <div className="sum-block"><div className="sum-lbl">Monthly average</div><div className="sum-num-sm">{monthlyAvg} items</div></div>
+
           </div>
         </div>
       </div>
