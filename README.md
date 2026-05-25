@@ -40,9 +40,6 @@ cd inventory-system1/ayurveda-inventory
 
 Create a `.env.local` file in the `ayurveda-inventory` root folder:
 
-```bash
-touch .env.local
-```
 
 ---
 
