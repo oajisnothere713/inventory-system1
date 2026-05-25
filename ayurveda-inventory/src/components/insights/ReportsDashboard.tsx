@@ -288,7 +288,7 @@ function iconBg(key: string) {
   return "var(--ins-green-light)";
 }
 
-function buildActiveFilters(report: InsightReport | undefined, saved: ReportFilters | undefined): ReportFilters {
+function buildActiveFilters(report: InsightReport | undefined | null, saved: ReportFilters | undefined): ReportFilters {
   if (!report) return {};
   return report.params.reduce<ReportFilters>((filters, param) => {
     filters[param.id] = saved?.[param.id] ?? param.default ?? param.opts?.[0] ?? "";
