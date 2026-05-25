@@ -19,8 +19,8 @@ export default function NewCapexChartCard({ createdCounts, totalThisYear, peakMo
               <BarChart data={{
                 labels: createdCounts.map(c => c.month),
                 datasets: [
-                  { label: 'Medical devices', data: createdCounts.map(c => c.devices), backgroundColor: '#185FA5' },
-                  { label: 'Electrical', data: createdCounts.map(c => c.electrical), backgroundColor: '#1A6B3C' },
+                  { label: 'Medical devices', data: createdCounts.map(c => c.devices), backgroundColor: '#F59E0B' },
+                  { label: 'Electrical', data: createdCounts.map(c => c.electrical), backgroundColor: '#10B981' },
                 ]
               }} />
             </div>
@@ -31,9 +31,9 @@ export default function NewCapexChartCard({ createdCounts, totalThisYear, peakMo
             <div style={{ height: 1, background: 'var(--border)' }}></div>
             <div className="sum-block"><div className="sum-lbl">Peak month</div><div className="sum-num-sm">{peakMonth} &nbsp;<span style={{ color: 'var(--green)' }}>{createdCounts.reduce((m, c) => c.total > m.total ? c : m, createdCounts[0] || { month: '', total: 0 }).total} items</span></div></div>
             <div style={{ height: 1, background: 'var(--border)' }}></div>
-            <div className="sum-block"><div className="sum-lbl">Devices added</div><div className="sum-num-sm" style={{ color: 'var(--blue)' }}>{devicesAdded} items</div></div>
+            <div className="sum-block"><div className="sum-lbl">Devices added</div><div className="sum-num-sm" style={{ color: '#F59E0B' }}>{devicesAdded} items</div></div>
             <div style={{ height: 1, background: 'var(--border)' }}></div>
-            <div className="sum-block"><div className="sum-lbl">Electrical added</div><div className="sum-num-sm" style={{ color: 'var(--green)' }}>{electricalAdded} items</div></div>
+            <div className="sum-block"><div className="sum-lbl">Electrical added</div><div className="sum-num-sm" style={{ color: '#10B981' }}>{electricalAdded} items</div></div>
 
           </div>
         </div>
