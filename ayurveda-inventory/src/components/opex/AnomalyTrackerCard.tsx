@@ -10,7 +10,11 @@ const PRODUCTS = [
   {name:'Haritaki',color:'#3d5a6c',data:[95,110,80,130,340,90],unit:'g',note:'Mar usage (340g) was 2.6× the avg (141g). Unexpectedly high — check if stock was bulk issued or misrecorded.'}
 ];
 
-const MONTHS = ['Nov','Dec','Jan','Feb','Mar','Apr'];
+const MONTHS = Array.from({ length: 6 }, (_, i) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - (5 - i));
+  return d.toLocaleString('en-US', { month: 'short' });
+});
 const FACTOR = 1.5;
 
 type Product = { name: string; color?: string; data: number[]; unit?: string; note?: string | null }
