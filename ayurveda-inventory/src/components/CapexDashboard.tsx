@@ -111,14 +111,15 @@ export default function CapexDashboard(){
     const start = new Date(d.getFullYear(), d.getMonth(), 1)
     const end = new Date(d.getFullYear(), d.getMonth()+1, 1)
     const monthItems = items.filter(i => i.createdAt && new Date(i.createdAt) >= start && new Date(i.createdAt) < end)
-    const dev = monthItems.filter(i=>i.subcat === 'devices').length
-    const elec = monthItems.filter(i=>i.subcat === 'electrical').length
+    const dev = monthItems.filter(i=>i.subcat === 'devices').reduce((s, i) => s + i.stock, 0)
+    const elec = monthItems.filter(i=>i.subcat === 'electrical').reduce((s, i) => s + i.stock, 0)
     return { month: label, devices: dev, electrical: elec, total: dev+elec }
   })
 
-  const totalThisYear = items.filter(i => i.createdAt && new Date(i.createdAt).getFullYear() === now.getFullYear()).length
-  const devicesAdded = items.filter(i => i.createdAt && new Date(i.createdAt).getFullYear() === now.getFullYear() && i.subcat === 'devices').length
-  const electricalAdded = items.filter(i => i.createdAt && new Date(i.createdAt).getFullYear() === now.getFullYear() && i.subcat === 'electrical').length
+  const thisYearItems = items.filter(i => i.createdAt && new Date(i.createdAt).getFullYear() === now.getFullYear())
+  const totalThisYear = thisYearItems.reduce((s, i) => s + i.stock, 0)
+  const devicesAdded = thisYearItems.filter(i => i.subcat === 'devices').reduce((s, i) => s + i.stock, 0)
+  const electricalAdded = thisYearItems.filter(i => i.subcat === 'electrical').reduce((s, i) => s + i.stock, 0)
   const monthlyAvg = Math.round(createdCounts.reduce((s,c)=>s+c.total,0)/createdCounts.length * 10)/10
   const peak = createdCounts.reduce((p,c)=> c.total > p.total ? c : p, createdCounts[0] || { month: '', total: 0 })
 

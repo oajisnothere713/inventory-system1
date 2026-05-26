@@ -12,8 +12,8 @@ export default function NewCapexChartCard({ createdCounts, totalThisYear, peakMo
         <div className="chart-with-summary">
           <div className="chart-col">
             <div className="chart-legend">
-              <div className="legend-item"><div className="legend-sq" style={{ background: 'var(--blue)' }}></div>Medical devices</div>
-              <div className="legend-item"><div className="legend-sq" style={{ background: 'var(--green)' }}></div>Electrical</div>
+              <div className="legend-item"><div className="legend-sq" style={{ background: '#F59E0B' }}></div>Medical devices</div>
+              <div className="legend-item"><div className="legend-sq" style={{ background: '#10B981' }}></div>Electrical</div>
             </div>
             <div className="chart-wrap">
               <BarChart data={{
@@ -22,6 +22,11 @@ export default function NewCapexChartCard({ createdCounts, totalThisYear, peakMo
                   { label: 'Medical devices', data: createdCounts.map(c => c.devices), backgroundColor: '#F59E0B' },
                   { label: 'Electrical', data: createdCounts.map(c => c.electrical), backgroundColor: '#10B981' },
                 ]
+              }} options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
               }} />
             </div>
           </div>
