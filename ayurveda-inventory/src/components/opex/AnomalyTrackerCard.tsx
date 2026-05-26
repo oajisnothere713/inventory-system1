@@ -152,7 +152,7 @@ export default function AnomalyTrackerCard(){
         },
         scales: {
           x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 11 } } },
-          y: { beginAtZero: false, grid: { color: '#dce8de', lineWidth: 0.5 }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 10, family: "'DM Mono',monospace" } } }
+          y: { type: 'logarithmic', grid: { color: '#dce8de', lineWidth: 0.5 }, border: { display: false }, ticks: { color: '#7a9982', font: { size: 10, family: "'DM Mono',monospace" } } }
         }
       }
     });
