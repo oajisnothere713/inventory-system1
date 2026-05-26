@@ -15,8 +15,8 @@ export default function DonutCard({ total, devices, electrical, deviceGroups, el
   const electricalOffset = -(devicesArc - devicesOffset)
 
   // Colors matched from screenshot
-  const colorDevices = "#1A5CA5"; // Blue
-  const colorElectrical = "#207245"; // Green
+  const colorDevices = "#F59E0B"; // Orange
+  const colorElectrical = "#10B981"; // Green
   const colorBg = "#F1F5F9"; 
 
   return (

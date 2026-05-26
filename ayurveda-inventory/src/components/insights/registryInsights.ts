@@ -322,6 +322,7 @@ export function buildReports(items: Item[]): Record<string, InsightReport> {
 }
 
 export function answerRegistryQuestion(question: string, items: Item[]): AssistantResponse {
+  const cellText = (cell: Cell | undefined) => !cell ? "" : typeof cell === "string" ? cell : cell.t;
   const q = question.toLowerCase();
   const reports = buildReports(items);
   const alerts = buildAlerts(items);
@@ -329,21 +330,46 @@ export function answerRegistryQuestion(question: string, items: Item[]): Assista
     return { intro: "I could not load Item Registry data yet.", text: "Open Item Registry once or check the registry API/database connection, then try again." };
   }
 
-  if (q.includes("expir")) {
-    const rows = reports.expiry.rows.slice(0, 8);
-    return { intro: `Found ${reports.expiry.totalRows} expiring or dated batches from Item Registry.`, table: { heads: reports.expiry.headers, rows }, caveat: "Rows are sorted by earliest expiry first." };
+  // 1. "Show me all CAPEX assets with expired AMC"
+  if (q.includes("expired amc")) {
+    const expiredAmc = reports.amc.rows.filter(row => {
+      const d = parseInt(cellText(row[8]).replace("d", ""));
+      return !isNaN(d) && d < 0;
+    });
+    const rows = expiredAmc.slice(0, 8);
+    return { intro: `Found ${expiredAmc.length} CAPEX assets with expired AMC contracts.`, table: { heads: reports.amc.headers, rows }, caveat: "You should renew these contracts to maintain asset coverage." };
   }
+  
+  // 2. "Which AMC contracts are expiring in the next 90 days?"
+  if (q.includes("amc") || q.includes("capex")) {
+    const expiringAmc = reports.amc.rows.filter(row => {
+      const d = parseInt(cellText(row[8]).replace("d", ""));
+      return !isNaN(d) && d >= 0 && d <= 90;
+    });
+    const rows = expiringAmc.slice(0, 8);
+    return { intro: `Found ${expiringAmc.length} CAPEX AMC contracts expiring within the next 90 days.`, table: { heads: reports.amc.headers, rows }, caveat: "Sorted by most urgent AMC end date." };
+  }
+  
+  // 3. "Which batches have already expired and need disposal?"
   if (q.includes("expired") || q.includes("disposal") || q.includes("dispose")) {
     const rows = reports.wastage.rows.slice(0, 8);
     return { intro: `Found ${reports.wastage.totalRows} expired batches requiring disposal from Item Registry.`, table: { heads: reports.wastage.headers, rows }, caveat: "Estimated value uses item price per unit where available." };
   }
+  
+  // 4. "Which items are expiring in the next 30 days?"
+  if (q.includes("expir")) {
+    const expiring = reports.expiry.rows.filter(row => {
+      const d = parseInt(cellText(row[8]).replace("d", ""));
+      return !isNaN(d) && d >= 0 && d <= 30;
+    });
+    const rows = expiring.slice(0, 8);
+    return { intro: `Found ${expiring.length} batches expiring in the next 30 days.`, table: { heads: reports.expiry.headers, rows }, caveat: "Rows are sorted by earliest expiry first." };
+  }
+
+  // 5. Low stock checks
   if (q.includes("low") || q.includes("minimum") || q.includes("reorder")) {
     const rows = reports.reorder.rows.slice(0, 8);
     return { intro: `Found ${reports.reorder.totalRows} items below minimum stock.`, table: { heads: reports.reorder.headers, rows }, caveat: "Gap is calculated as minimum stock minus available stock." };
-  }
-  if (q.includes("amc") || q.includes("capex")) {
-    const rows = reports.amc.rows.slice(0, 8);
-    return { intro: `Found ${reports.amc.totalRows} CAPEX AMC records from Item Registry.`, table: { heads: reports.amc.headers, rows }, caveat: "Sorted by most urgent AMC end date." };
   }
   if (q.includes("fefo")) {
     const named = items.find((item) => q.includes(item.name.toLowerCase())) ?? items.find((item) => item.category === "OPEX" && fefoSort(item).length > 1);
