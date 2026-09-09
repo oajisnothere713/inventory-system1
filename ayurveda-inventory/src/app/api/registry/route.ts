@@ -1,13 +1,6 @@
-import { PrismaClient } from '@/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 import { fetchRegistryRows } from '@/lib/registryData'
-
-const dbUrl = process.env.DATABASE_URL
-if (!dbUrl) throw new Error('DATABASE_URL is not set')
-// adapter typing is incompatible with current PrismaClient constructor
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any)
 
 const deptCategoryFor = (code: string): 'clinical' | 'admin' | 'lab' | 'pharmacy' | 'other' => {
   if (code === 'PHM') return 'pharmacy'

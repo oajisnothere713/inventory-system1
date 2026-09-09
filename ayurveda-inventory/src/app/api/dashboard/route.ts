@@ -1,16 +1,11 @@
-import { PrismaClient } from '@/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 import { mapRegistryRow } from '@/lib/registryMap'
 import { fetchRegistryRows } from '@/lib/registryData'
 import {
   buildDashboardAttentionPreviews,
   getOperationalAlertBreakdown,
 } from '@/lib/operationalAlerts'
-
-const dbUrl = process.env.DATABASE_URL
-if (!dbUrl) throw new Error('DATABASE_URL is not set')
-const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any)
 
 export async function GET() {
   try {

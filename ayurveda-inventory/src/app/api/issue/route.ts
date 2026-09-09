@@ -1,10 +1,5 @@
-import { PrismaClient } from '@/generated/prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { NextResponse } from 'next/server'
-
-const dbUrl = process.env.DATABASE_URL
-if (!dbUrl) throw new Error('DATABASE_URL is not set')
-const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as any)
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
   try {

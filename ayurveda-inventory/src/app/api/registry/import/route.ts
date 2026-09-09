@@ -1,11 +1,5 @@
-import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { NextResponse } from "next/server";
-
-const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) throw new Error("DATABASE_URL is not set");
-
-const prisma = new PrismaClient({ adapter: new PrismaPg(dbUrl) } as never);
+import { prisma } from "@/lib/prisma";
 
 type ImportRow = Record<string, string>;
 type ItemCategoryValue = "OPEX" | "CAPEX";
